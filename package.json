@@ -1,0 +1,26 @@
+{
+  "name": "pipepress",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs --out-dir dist",
+    "dev": "tsup src/index.ts --watch",
+    "example:compile": "tsc example/index.ts --outDir dist/example",
+    "example:run": "node dist/example/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^24.8.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "dist"
+  ]
+}
