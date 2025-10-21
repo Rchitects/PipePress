@@ -1,8 +1,8 @@
 /*** imports ***/
-import http from "http";
+import * as http from "http";
 import { Router } from "./router"
 import findMyWay, { HTTPVersion } from "find-my-way"
-import type { BaseCtx, Stage } from "./types";
+import { BaseCtx, Stage } from "./types";
 
 /*** class ***/
 export class PipePress extends Router {
@@ -13,7 +13,10 @@ export class PipePress extends Router {
 
     constructor() {
         super();
-        this._reqRouter = findMyWay();
+        this._reqRouter = findMyWay({
+            ignoreTrailingSlash: true,
+            ignoreDuplicateSlashes: true
+        });
     }
 
     /*** public functions ***/
@@ -23,14 +26,16 @@ export class PipePress extends Router {
         const allRoutes = this.collectRoutes();
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
-
             const pipeline = [...(route.stages ?? []), route.handler];
             this._reqRouter.on(route.method, route.path, async (req, res, params) => {
                 await this._runPipeline(req, res, params, pipeline);
             });
         }
 
-        console.dir(allRoutes);
+        /* dev. output TODO: */
+        allRoutes.map((route) => {
+            console.log(`[${route.method}] ${route.path} - Stages: ${route.stages?.length} - Handler: ${route.handler.name ?? '<anonymous>'}`);
+        })
 
         this._build = true;
     }
@@ -50,6 +55,23 @@ export class PipePress extends Router {
         });
     }
 
+    close(): Promise<void> {
+        return new Promise((res, rej) => {
+            if (this._server) {
+                /* start server closing */
+                this._server.close((err) => {
+                    if (err) rej(err);
+                    else res();
+                });
+                /* force close all open connections */
+                this._server.closeAllConnections();
+            }
+            else {
+                res();
+            }
+        });
+    }
+
     /*** private functions ***/
     private async _runPipeline(req: http.IncomingMessage, res: http.ServerResponse, params: Record<string, string | undefined>, pipeline: Stage[]) {
         /* create context */
@@ -64,7 +86,6 @@ export class PipePress extends Router {
                 const response = await stage(ctx);
                 if (response) {
                     // TODO: send response and stop pipeline
-
                     return;
                 }
                 else if (res.headersSent) {
@@ -74,10 +95,12 @@ export class PipePress extends Router {
             }
             /* if this point is reached no stage has send any response -> error */
             // TODO: throw error
+            ctx.res.statusCode = 500;
+            ctx.res.end('Endpoint is not implemented');
         }
         catch (e) {
             // TODO: catch API error
-            // TOD: catch other errors
+            // TODO: catch other errors
         }
     }
 }
