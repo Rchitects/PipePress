@@ -1,13 +1,9 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import type { APIResponse } from "./response";
 
 /**
  * router types
  */
-export type RouterOptions = {
-    prefix?: string;
-}
 export type HTTPMethod =
     | "GET"
     | "POST"
@@ -16,28 +12,60 @@ export type HTTPMethod =
     | "DELETE"
     | "OPTIONS"
     | "HEAD";
-export type BaseCtx<Body = any, Query = any, Params = any, Extra = {}> = {
-    req: IncomingMessage & {
-        body?: Body;
-        query?: Query;
-        params?: Params;
-    };
+
+export type PipeContext = {
+    req: IncomingMessage;
     res: ServerResponse;
-} & Extra;
-export type ExtendedCtx<C, Extra> = C & Extra;
-export type Stage<StCtx extends BaseCtx = BaseCtx> = (ctx: StCtx) => Promise<APIResponse | undefined> | APIResponse | undefined;
-export type Route<RCtx extends BaseCtx = BaseCtx> = {
+    params: Record<string, string | undefined>;
+    query: Record<string, string>;
+    body?: any;
+    [key: string]: any;
+}
+export type PipeResponse<Body = any> = {
+    status: HTTPStatus;
+    body?: Body;
+    headers?: Record<string, string>;
+    serializer?: stringyfy<Body>;    // TODO: use fast-json
+}
+export type PipeStageHandler<Body> = (ctx: PipeContext) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
+export type PipeRouteHandler<Res> = (ctx: PipeContext) => Promise<Res | void> | Res | void;
+export type PipeStage<Res> = {
+    handler: PipeStageHandler<Res>;
+    serializer?: stringyfy<Res>;    // TODO: use fast-json
+}
+export type PipeRoute<Res> = {
+    handler: PipeRouteHandler<Res>;
+    serializer?: stringyfy<Res>;    // TODO: use fast-json
+}
+export type Route = {
     method: HTTPMethod;
     path: string;
-    handler: Stage<RCtx>;
-    stages?: Stage<RCtx>[];
-};
-
-/**
- * PipePress types
- */
-export type CompiledRoute<RCtx extends BaseCtx = BaseCtx> = {
+    handler: PipeRoute<any>;
+    stages?: PipeStage<any>[];
+}
+export type RouteCompiled = {
     method: HTTPMethod;
     fullPath: string;
-    pipeline: Stage<RCtx>[];
+    pipeline: PipeStage<any>[];
+    handler: PipeRoute<any>;
 }
+/**
+ * PipeResponse types
+ */
+export enum HTTPStatus {
+    // success
+    OK = 200,
+    CREATED = 201,
+    NO_CONTENT = 204,
+    // client error
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    // server error
+    INTERNAL_ERROR = 500
+}
+export type HTTPContentType =
+    | 'application/json'
+    | 'text/plain';
+export type stringyfy<T> = (data: T) => string;

@@ -1,68 +1,49 @@
 /*** imports ***/
-import type { BaseCtx, HTTPMethod, Stage, Route, RouterOptions, ExtendedCtx } from "./types";
+import type { HTTPMethod, Route, PipeStage, RouteCompiled, PipeRoute, } from "./types";
 
 /*** defintions ***/
 
 /*** class ***/
-export class Router<RCtx extends BaseCtx = BaseCtx> {
+export class Router {
     /*** variables ***/
-    public prefix: string;
-    private _stages: Stage<RCtx>[] = [];
-    private _routes: Route<RCtx>[] = [];
-    private _children: Router<RCtx>[] = [];
-
-    /*** constructor ***/
-    constructor(options?: RouterOptions) {
-        this.prefix = options?.prefix ?? '';
-    }
+    private _stages: PipeStage<any>[] = [];
+    private _routes: Route[] = [];
+    private _children: { prefix: string, router: Router }[] = [];
 
     /*** public functions ***/
-    // TODO: create overright to handle sub-router & stages
-    use<Extra = {}>(stage: Stage<ExtendedCtx<RCtx, Extra>>): Router<ExtendedCtx<RCtx, Extra>> {
-        // TODO: make this cleaner without any
-        this._stages.push(stage as any);
-        return this as any;
+    use(stage: PipeStage<any>): Router {
+        this._stages.push(stage);
+        return this;
     }
 
-    on<
-        Body = any,
-        Query = any,
-        Params = any,
-        Extra = {}
-    >(method: HTTPMethod, path: string, ...stages: Stage<ExtendedCtx<RCtx, BaseCtx<Body, Query, Params, Extra>>>[]) {
-        /* extract last middle as main handler */
-        // TODO: make this cleaner (Typesafety)
-        const finalHandler = stages.pop() as unknown as Stage<RCtx>;
-        const rest = stages as unknown as Stage<RCtx>[];
-
+    on(method: HTTPMethod, path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
         this._routes.push({
-            method,
-            path,
-            handler: finalHandler,
-            stages: rest
-        });
+            method: method,
+            path: path,
+            handler: handler,
+            stages: stages
+        })
     }
     // TODO: Typesafety
-    mount(path: string, router: Router<RCtx>) {
-        router.prefix = path;
-        this._children.push(router);
+    mount(path: string, router: Router) {
+        this._children.push({ prefix: path, router: router });
     }
 
-    collectRoutes(prefix: string = '', inheritedStages: Stage<RCtx>[] = []): Route<RCtx>[] {
+    collectRoutes(prefix: string = '', inheritedStages: PipeStage<any>[] = []): RouteCompiled[] {
         const combStages = [...inheritedStages, ...this._stages];
 
         /* collect own routes */
-        const routes: Route<RCtx>[] = this._routes.map((route) => {
+        const routes: RouteCompiled[] = this._routes.map((route) => {
             return {
+                fullPath: prefix + route.path,
                 method: route.method,
-                path: prefix + route.path,
-                handler: route.handler,
-                stages: [...combStages, ...(route.stages ?? [])]
+                pipeline: [...combStages, ...(route.stages ?? [])],
+                handler: route.handler
             };
         });
         /* get sub routes */
-        for (const child of this._children) {
-            routes.push(...child.collectRoutes(prefix + child.prefix, combStages));
+        for (const { prefix: subPrefix, router } of this._children) {
+            routes.push(...router.collectRoutes(prefix + subPrefix, combStages));
         }
 
         return routes;
@@ -70,20 +51,21 @@ export class Router<RCtx extends BaseCtx = BaseCtx> {
 
 
     /*** public HTTP functions ***/
-    get(path: string, ...stages: Stage<any>[]) {
-        this.on('GET', path, ...stages);
+    //TODO: change ...stages and sers. to an option parameter?
+    get(path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
+        this.on('GET', path, handler, ...stages);
     }
-    post(path: string, ...stages: Stage<any>[]) {
-        this.on('POST', path, ...stages);
+    post(path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
+        this.on('POST', path, handler, ...stages);
     }
-    put(path: string, ...stages: Stage<any>[]) {
-        this.on('PUT', path, ...stages);
+    put(path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
+        this.on('PUT', path, handler, ...stages);
     }
-    patch(path: string, ...stages: Stage<any>[]) {
-        this.on('PATCH', path, ...stages);
+    patch(path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
+        this.on('PATCH', path, handler, ...stages);
     }
-    delete(path: string, ...stages: Stage<any>[]) {
-        this.on('DELETE', path, ...stages);
+    delete(path: string, handler: PipeRoute<any>, ...stages: PipeStage<any>[]) {
+        this.on('DELETE', path, handler, ...stages);
     }
     // options(){} // TODO: needed?
     // head(){}    // TODO: needed?

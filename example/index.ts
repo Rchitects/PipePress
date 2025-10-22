@@ -1,29 +1,64 @@
-import { PipePress } from "../src/core/pipepress";
-import { Router } from "../src/core/router";
-import { BaseCtx } from "../src/core/types";
+import { PipePress } from '../src/core/pipepress';
+import { Router } from '../src/core/router';
+import { PipeStage } from '../src/core/types';
 
+/*** pre-defined stages ***/
+const logger: PipeStage<void> = {
+    handler: async (ctx) => {
+        ctx.req.on('end', () => {
+            console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
+        });
+    }
+}
 /*** router ***/
-const router1 = new Router().use<{ user: string }>(async (ctx) => {
-
+const router1 = new Router();
+router1.use({
+    handler: async (ctx) => {
+        console.log('user stage')
+    }
 });
-
-router1.on<any, any, any, { name: string }>('GET', '/test', async (ctx) => {
-
+router1.get('/', {
+    handler: async (ctx) => {
+        console.log('GET /user')
+    }
 });
-
-const router2 = new Router();
-router2.post('/create', async (ctx) => { });
-router2.get('/', async (ctx: BaseCtx) => { });
-
-router1.mount('/user', router2);
 
 /*** pipepress ***/
 const app = new PipePress();
-app.get('/', async (ctx: BaseCtx) => {
-    ctx.res.statusCode = 200;
-    ctx.res.end('All fine!');
+
+app.use(logger);
+app.use({
+    handler: async (ctx) => {
+        console.log('Global Stage');
+    }
 });
-app.mount('/api', router1 as any);
+
+app.get('/', {
+    handler: async (ctx) => {
+        console.log('GET /')
+    },
+});
+app.get('/data',
+    {
+        handler: async (ctx) => {
+            return {
+                name: 'Penis',
+                id: 123321
+            }
+        },
+    },
+    {
+        handler: async (ctx) => {
+            console.log('/data stage');
+        }
+    }
+);
+app.get('/error', {
+    handler: async (ctx) => {
+        throw new Error('WTF IS THIS');
+    }
+});
+app.mount('/user', router1);
 
 app.build();
 
