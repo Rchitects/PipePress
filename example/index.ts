@@ -1,67 +1,42 @@
-import { PipePress } from '../src/core/pipepress';
-import { Router } from '../src/core/router';
-import { PipeStage } from '../src/core/types';
+/*** imports ***/
+import { PipePress, Router, PipeStage, pipeBodyParser } from "../src/index";
 
 /*** pre-defined stages ***/
 const logger: PipeStage<void> = {
     handler: async (ctx) => {
+        if (ctx.body) {
+            console.dir(ctx.body);
+        }
         ctx.req.on('end', () => {
             console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
         });
     }
 }
 /*** router ***/
-const router1 = new Router();
-router1.use({
-    handler: async (ctx) => {
-        console.log('user stage')
-    }
-});
-router1.get('/', {
-    handler: async (ctx) => {
-        console.log('GET /user')
-    }
-});
-
 /*** pipepress ***/
 const app = new PipePress();
 
+/* global stages */
+app.use(pipeBodyParser({ isoDate: true }))
 app.use(logger);
-app.use({
-    handler: async (ctx) => {
-        console.log('Global Stage');
-    }
-});
 
-app.get('/', {
-    handler: async (ctx) => {
-        console.log('GET /')
-    },
-});
-app.get('/data',
-    {
-        handler: async (ctx) => {
-            return {
-                name: 'Penis',
-                id: 123321
-            }
-        },
-    },
-    {
-        handler: async (ctx) => {
-            console.log('/data stage');
-        }
-    }
-);
+/* routes */
 app.get('/error', {
     handler: async (ctx) => {
         throw new Error('WTF IS THIS');
     }
 });
-app.mount('/user', router1);
 
+app.post('/data', {
+    handler: async (ctx) => {
+        return { status: 'IO', message: 'Created', ...ctx.body };
+    }
+})
+
+/* create routes */
 app.build();
 
+/* start server */
 app.listen(4000)
     .then(() => {
         console.log('Running');

@@ -1,5 +1,5 @@
 /*** imports ***/
-import { DefaultPipeErrPayload, defaultPipeErrSerializer } from "./schema";
+import { BadRequestPipeErrPayload, DefaultPipeErrPayload, defaultPipeErrSerializer } from "./schema";
 import { HTTPStatus, PipeResponse, stringyfy } from "./types";
 
 /*** main class ***/
@@ -33,5 +33,15 @@ export class DefaultPipeErr extends PipeError<DefaultPipeErrPayload> {
             message: this.message,
             name: this.name
         };
+    }
+}
+export class BadRequestPipeErr extends PipeError<BadRequestPipeErrPayload> {
+    protected getPayload(): BadRequestPipeErrPayload | undefined {
+        return {
+            message: this.message
+        }
+    }
+    constructor(message: string) {
+        super('BadRequestPipeErr', message, HTTPStatus.BAD_REQUEST);
     }
 }

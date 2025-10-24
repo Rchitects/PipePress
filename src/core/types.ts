@@ -52,20 +52,22 @@ export type RouteCompiled = {
 /**
  * PipeResponse types
  */
-export enum HTTPStatus {
+export const HTTPStatus = {
     // success
-    OK = 200,
-    CREATED = 201,
-    NO_CONTENT = 204,
+    OK: 200,
+    CREATED: 201,
+    NO_CONTENT: 204,
     // client error
-    BAD_REQUEST = 400,
-    UNAUTHORIZED = 401,
-    FORBIDDEN = 403,
-    NOT_FOUND = 404,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
     // server error
-    INTERNAL_ERROR = 500
-}
+    INTERNAL_ERROR: 500
+} as const;
+export type HTTPStatus = typeof HTTPStatus[keyof typeof HTTPStatus];
 export type HTTPContentType =
     | 'application/json'
-    | 'text/plain';
+    | 'text/plain'
+    | 'application/x-www-form-urlencoded';
 export type stringyfy<T> = (data: T) => string;

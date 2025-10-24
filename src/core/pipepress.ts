@@ -2,7 +2,7 @@
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
 import { Router } from "./router";
-import { HTTPContentType, HTTPStatus, PipeContext, PipeResponse } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, PipeContext, PipeResponse } from "./types";
 import { DefaultPipeErr, PipeError } from "./error";
 
 /*** class ***/
@@ -11,6 +11,7 @@ export class PipePress extends Router {
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
+    private _allowedMethods: HTTPMethod[] = []; //TODO: fill array and create OPTIONS stage
 
     constructor() {
         super();
