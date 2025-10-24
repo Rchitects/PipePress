@@ -2,8 +2,9 @@
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, PipeContext, PipeResponse } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, PipeContext, PipeResponse, RouteCompiled } from "./types";
 import { DefaultPipeErr, PipeError } from "./error";
+import { optionsRequestRoute } from "../stages/optionsHandler";
 
 /*** class ***/
 export class PipePress extends Router {
@@ -11,7 +12,7 @@ export class PipePress extends Router {
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _allowedMethods: HTTPMethod[] = []; //TODO: fill array and create OPTIONS stage
+    private _allowedMethods: Set<HTTPMethod> = new Set();
 
     constructor() {
         super();
@@ -26,6 +27,18 @@ export class PipePress extends Router {
         if (this._build) throw new Error('build() was already called');
 
         const allRoutes = this.collectRoutes();
+
+        /* catch all the methods */
+        this._allowedMethods = new Set(allRoutes.map(_ => _.method)).add('OPTIONS')
+
+        /* create route for OPTIONS request */
+        const optionsRoute: RouteCompiled = {
+            fullPath: '*',
+            method: 'OPTIONS',
+            pipeline: [...this._stages],
+            handler: optionsRequestRoute(Array.from(this._allowedMethods))
+        }
+        allRoutes.push(optionsRoute);
 
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
@@ -70,6 +83,7 @@ export class PipePress extends Router {
         }
 
         /* dev. output TODO: */
+        console.log(`Methods: ${Array.from(this._allowedMethods).join(',')}`);
         allRoutes.map((route) => {
             console.log(`[${route.method}] ${route.fullPath} - Stages: ${route.pipeline.length}`);
         })

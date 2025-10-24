@@ -6,9 +6,9 @@ import type { HTTPMethod, Route, PipeStage, RouteCompiled, PipeRoute, } from "./
 /*** class ***/
 export class Router {
     /*** variables ***/
-    private _stages: PipeStage<any>[] = [];
-    private _routes: Route[] = [];
-    private _children: { prefix: string, router: Router }[] = [];
+    protected _stages: PipeStage<any>[] = [];
+    protected _routes: Route[] = [];
+    protected _children: { prefix: string, router: Router }[] = [];
 
     /*** public functions ***/
     use(stage: PipeStage<any>): Router {
