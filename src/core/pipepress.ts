@@ -210,6 +210,7 @@ export class PipePress extends Router {
             /* run not found handler */
             if (this._notFoundHandler) {
                 const res = await this._notFoundHandler.handler(ctx);
+                //TODO: send response
             }
             else {
                 /* create default not repsonse by throwing error*/
