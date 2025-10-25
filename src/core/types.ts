@@ -12,11 +12,11 @@ export type HTTPMethod =
     | "DELETE"
     | "OPTIONS"
     | "HEAD";
-
+export type Params = { [key: string]: string | undefined }
 export type PipeContext = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: Record<string, string | undefined>;
+    params: Params;
     query: Record<string, string>;
     body?: any;
     [key: string]: any;
@@ -49,6 +49,7 @@ export type RouteCompiled = {
     pipeline: PipeStage<any>[];
     handler: PipeRoute<any>;
 }
+
 /**
  * PipeResponse types
  */

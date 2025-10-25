@@ -1,5 +1,6 @@
 /*** imports ***/
-import { BadRequestPipeErrPayload, DefaultPipeErrPayload, defaultPipeErrSerializer } from "./schema";
+import { HTTPMethod } from "find-my-way";
+import { BadRequestPipeErrPayload, badRequestPipeErrSerializer, DefaultPipeErrPayload, defaultPipeErrSerializer, notFoundPipeErrSerializer, NotFoundPipErrPayload } from "./schema";
 import { HTTPStatus, PipeResponse, stringyfy } from "./types";
 
 /*** main class ***/
@@ -36,12 +37,25 @@ export class DefaultPipeErr extends PipeError<DefaultPipeErrPayload> {
     }
 }
 export class BadRequestPipeErr extends PipeError<BadRequestPipeErrPayload> {
+    constructor(message: string) {
+        super('BadRequestPipeErr', message, HTTPStatus.BAD_REQUEST, badRequestPipeErrSerializer);
+    }
     protected getPayload(): BadRequestPipeErrPayload | undefined {
         return {
             message: this.message
         }
     }
-    constructor(message: string) {
-        super('BadRequestPipeErr', message, HTTPStatus.BAD_REQUEST);
+
+}
+export class NotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
+    protected getPayload(): NotFoundPipErrPayload | undefined {
+        return {
+            message: this.message,
+            method: this.method,
+            path: this.path
+        }
+    }
+    constructor(public method: HTTPMethod, public path: string, message: string = 'URL not found') {
+        super('NptFoundPipeErr', message, HTTPStatus.NOT_FOUND, notFoundPipeErrSerializer);
     }
 }

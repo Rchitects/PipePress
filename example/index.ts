@@ -33,6 +33,16 @@ app.post('/data', {
     }
 })
 
+/* router */
+const router = new Router();
+router.get('/:id', {
+    handler: async (ctx) => {
+        console.log('Get user with id ', ctx.params.id);
+        return { name: 'Johnny', id: ctx.params.id, created: new Date() };
+    }
+})
+app.mount('/user', router);
+
 /* create routes */
 app.build();
 

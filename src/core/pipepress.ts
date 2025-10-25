@@ -1,9 +1,9 @@
 /*** imports ***/
-import findMyWay, { HTTPVersion } from "find-my-way";
+import findMyWay, { Handler, HTTPVersion } from "find-my-way";
 import * as http from "http";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, PipeContext, PipeResponse, RouteCompiled } from "./types";
-import { DefaultPipeErr, PipeError } from "./error";
+import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeResponse, PipeRoute, PipeStage, RouteCompiled } from "./types";
+import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { optionsRequestRoute } from "../stages/optionsHandler";
 
 /*** class ***/
@@ -13,6 +13,7 @@ export class PipePress extends Router {
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
     private _allowedMethods: Set<HTTPMethod> = new Set();
+    private _notFoundHandler: PipeRoute<any> | undefined;   // TODO: add method to use one handler
 
     constructor() {
         super();
@@ -29,7 +30,7 @@ export class PipePress extends Router {
         const allRoutes = this.collectRoutes();
 
         /* catch all the methods */
-        this._allowedMethods = new Set(allRoutes.map(_ => _.method)).add('OPTIONS')
+        this._allowedMethods = new Set(allRoutes.map(_ => _.method)).add('OPTIONS');
 
         /* create route for OPTIONS request */
         const optionsRoute: RouteCompiled = {
@@ -97,7 +98,7 @@ export class PipePress extends Router {
             if (this._server) reject(new Error('server is already running'));
 
             this._server = http.createServer((req, res) => {
-                this._reqRouter.lookup(req, res);
+                this._handleRequest(req, res);
             });
 
             this._server.listen(port, () => {
@@ -124,17 +125,27 @@ export class PipePress extends Router {
     }
 
     /*** private functions ***/
-    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: { [key: string]: string | undefined }): PipeContext {
+    private _handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+        const match = this._reqRouter.find(req.method as HTTPMethod || 'GET', req.url || '');
+
+        if (match) {
+            match.handler(req, res, match.params, match.store, match.searchParams);
+        }
+        else {
+            /* call not-Found handler */
+            this._handleNotFound(req, res);
+        }
+    }
+    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: Params): PipeContext {
         const ctx: PipeContext = {
             req,
             res,
             params,
-            query: {}
+            query: {}    // TODO: catch query params
         };
         return ctx;
     }
     private _sendResponse(res: http.ServerResponse, result: PipeResponse) {
-        console.log(result);
         if (res.headersSent) return;
         /* set status */
         res.statusCode = result.status;
@@ -172,70 +183,42 @@ export class PipePress extends Router {
                 this._sendResponse(ctx.res, err.toPipeResponse());
             }
             else {
-
+                // TODO: create some error for unknown failuires
             }
         }
         catch (e) {
             /* double failer -> make it clear for logging or somehting like this */
-            console.log(e);
+            console.log(e); // TODO:
         }
     }
-    // private async _runPipeline(req: http.IncomingMessage, res: http.ServerResponse, params: Record<string, string | undefined>, pipeline: Stage[]) {
-    //     /* create context */
-    //     const ctx: BaseCtx = {
-    //         req: Object.assign(req, { params }),
-    //         res: res
-    //     };
+    private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
+        /* create context for this route */
+        const ctx = this._createContext(req, res, {});
 
-    //     /* run the pipeline */
-    //     try {
-    //         for (const stage of pipeline) {
-    //             const response = await stage(ctx);
+        /* start executing all global stages */
+        try {
+            /* stages */
+            for (const stage of this._stages) {
+                const stageRes = await stage.handler(ctx);
 
-    //             if (res.headersSent) return; /* current stage already send a response */
+                if (stageRes) {
+                    /* if stage returned something stop pipeline with response */
+                    return this._sendResponse(res, stageRes);
+                }
+            }
 
-    //             if (response) {
-    //                 // TODO: send response and stop pipeline
-    //                 return response.send(res);
-    //             }
-    //         }
-    //         /* if this point is reached no stage has send any response -> error */
-    //         throw new InternalError('Route pipelining failed');
-    //     }
-    //     catch (e) {
-    //         this._handleError(e, ctx);
-    //     }
-    // }
-
-    // private _handleError(err: any, ctx: BaseCtx) {
-    //     try {
-    //         if (err instanceof PipeError) {
-    //             const resp = new PipeResponse<string>(err.status, err.serialize());
-    //             resp.send(ctx.res);
-    //         }
-    //         else {
-    //             let pipeErr: PipeError<any>;
-    //             if (err instanceof Error) {
-    //                 pipeErr = new InternalError(err);
-    //             }
-    //             else {
-    //                 pipeErr = new InternalError();
-    //             }
-    //             const resp = new PipeResponse(pipeErr.status, pipeErr.serialize());
-    //             resp.send(ctx.res);
-    //         }
-    //     }
-    //     catch (fatal) {
-    //         /* even the the error handled failed -> try to close the response */
-    //         if (!ctx.res.headersSent) {
-    //             ctx.res.statusCode = HTTPStatus.INTERNAL_ERROR;
-    //             ctx.res.setHeader('Content-Type', 'application/json');
-    //             ctx.res.end(JSON.stringify({ error: 'Internal Server Error' }));
-    //             // TODO: make it visible for DEBUGING
-    //         }
-    //         else {
-    //             ctx.res.end();
-    //         }
-    //     }
-    // }
+            /* run not found handler */
+            if (this._notFoundHandler) {
+                const res = await this._notFoundHandler.handler(ctx);
+            }
+            else {
+                /* create default not repsonse by throwing error*/
+                throw new NotFoundPipeErr(req.method as HTTPMethod, req.url || '');
+            }
+        }
+        catch (e) {
+            // TODO: handle errors
+            this._handleError(e, ctx);
+        }
+    }
 }
