@@ -1,15 +1,12 @@
 /*** imports ***/
-import { PipePress, Router, PipeStage, pipeBodyParser } from "../src/index";
+import { PipePress, Router, PipeStage } from "../src/index";
 
 /*** pre-defined stages ***/
 const logger: PipeStage<void> = {
     handler: async (ctx) => {
-        if (ctx.body) {
-            console.dir(ctx.body);
-        }
-        ctx.req.on('end', () => {
+        ctx.res.on('finish', () => {
             console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
-        });
+        })
     }
 }
 /*** router ***/
@@ -17,30 +14,36 @@ const logger: PipeStage<void> = {
 const app = new PipePress();
 
 /* global stages */
-app.use(pipeBodyParser({ isoDate: true }))
 app.use(logger);
 
 /* routes */
-app.get('/error', {
-    handler: async (ctx) => {
-        throw new Error('WTF IS THIS');
-    }
+app.get('/error', async (ctx) => {
+    throw new Error('WTF IS THIS');
 });
 
-app.post('/data', {
-    handler: async (ctx) => {
-        return { status: 'IO', message: 'Created', ...ctx.body };
-    }
-})
+app.post('/data', { body: true }, async (ctx) => {
+    return { status: 'IO', message: 'Created', ...ctx.body };
+});
 
 /* router */
 const router = new Router();
-router.get('/:id', {
-    handler: async (ctx) => {
-        console.log('Get user with id ', ctx.params.id);
-        return { name: 'Johnny', id: ctx.params.id, created: new Date() };
-    }
-})
+router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
+router.get('/:id', async (ctx) => {
+    console.log('Get user with id ', ctx.params.id);
+    return { name: 'Johnny', id: ctx.params.id, created: new Date() };
+});
+router.get('/all', {
+    stages: [{
+        handler: async (ctx) => { console.log('Get all users private stage') }
+    }]
+}, async (ctx) => {
+    return {
+        users: [
+            { name: 'Johnny', id: '1', created: new Date() },
+            { name: 'Bob', id: '2', created: new Date() }
+        ]
+    };
+});
 app.mount('/user', router);
 
 /* create routes */

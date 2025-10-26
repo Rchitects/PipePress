@@ -1,10 +1,16 @@
 /*** imports ***/
-import findMyWay, { Handler, HTTPVersion } from "find-my-way";
+import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
-import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeResponse, PipeRoute, PipeStage, RouteCompiled } from "./types";
-import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
+import { parseAndValidateBody } from "../stages/bodyParser";
 import { optionsRequestRoute } from "../stages/optionsHandler";
+import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
+import { Router } from "./router";
+import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipePressConfig, PipeResponse, Route } from "./types";
+
+/*** definitions ***/
+const DEFAULT_CONFIG: PipePressConfig = {
+    maxBodyLength: 0
+}
 
 /*** class ***/
 export class PipePress extends Router {
@@ -13,14 +19,16 @@ export class PipePress extends Router {
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
     private _allowedMethods: Set<HTTPMethod> = new Set();
-    private _notFoundHandler: PipeRoute<any> | undefined;   // TODO: add method to use one handler
+    private _notFoundCustom: Pick<Route, 'handler' | 'serializer'> | undefined;   // TODO: add method to use one handler
+    private _config: PipePressConfig;
 
-    constructor() {
+    constructor(options: Partial<PipePressConfig> = {}) {
         super();
         this._reqRouter = findMyWay({
             ignoreTrailingSlash: true,
             ignoreDuplicateSlashes: true
         });
+        this._config = { ...DEFAULT_CONFIG, ...options };
     }
 
     /*** public functions ***/
@@ -33,41 +41,46 @@ export class PipePress extends Router {
         this._allowedMethods = new Set(allRoutes.map(_ => _.method)).add('OPTIONS');
 
         /* create route for OPTIONS request */
-        const optionsRoute: RouteCompiled = {
-            fullPath: '*',
+        const optionsRoute: Route = {
+            path: '*',
             method: 'OPTIONS',
-            pipeline: [...this._stages],
+            stages: [...this._stages],
             handler: optionsRequestRoute(Array.from(this._allowedMethods))
         }
         allRoutes.push(optionsRoute);
 
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
-            this._reqRouter.on(route.method, route.fullPath, async (req, res, params) => {
+            this._reqRouter.on(route.method, route.path, async (req, res, params) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params);
 
                 /* start executing all stages & handler */
                 try {
                     /* stages */
-                    for (const stage of route.pipeline) {
-                        const stageRes = await stage.handler(ctx);
+                    if (route.stages) {
+                        for (const stage of route.stages) {
+                            const stageRes = await stage.handler(ctx);
 
-                        if (stageRes) {
-                            /* if stage returned something stop pipeline with response */
-                            return this._sendResponse(res, stageRes);
+                            if (stageRes) {
+                                /* if stage returned something stop pipeline with response */
+                                return this._sendResponse(res, stageRes);
+                            }
                         }
                     }
 
+                    /* parse body */
+                    await parseAndValidateBody(ctx, route);
+
                     /* main handler */
-                    const mainRes = await route.handler.handler(ctx);
+                    const mainRes = await route.handler(ctx);
 
                     if (mainRes) {
                         /* create a valid OK response */
                         this._sendResponse(res, {
                             status: HTTPStatus.OK,
                             body: mainRes,
-                            serializer: route.handler.serializer,
+                            serializer: route.serializer
                             // headers: ?? TODO
                         });
                     }
@@ -84,10 +97,11 @@ export class PipePress extends Router {
         }
 
         /* dev. output TODO: */
-        console.log(`Methods: ${Array.from(this._allowedMethods).join(',')}`);
-        allRoutes.map((route) => {
-            console.log(`[${route.method}] ${route.fullPath} - Stages: ${route.pipeline.length}`);
-        })
+        // console.log(`Methods: ${Array.from(this._allowedMethods).join(',')}`);
+        // allRoutes.map((route) => {
+        //     console.log(`[${route.method}] ${route.path} - Stages: ${route.stages?.length || 0}`);
+        // })
+        console.log(this._reqRouter.prettyPrint());
 
         this._build = true;
     }
@@ -208,8 +222,8 @@ export class PipePress extends Router {
             }
 
             /* run not found handler */
-            if (this._notFoundHandler) {
-                const res = await this._notFoundHandler.handler(ctx);
+            if (this._notFoundCustom) {
+                const res = await this._notFoundCustom.handler(ctx);
                 //TODO: send response
             }
             else {

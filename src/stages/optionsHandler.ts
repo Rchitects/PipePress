@@ -1,13 +1,9 @@
 /*** imports ***/
-import { HTTPMethod, PipeRoute } from "../core/types";
-
-/*** types ***/
+import { HTTPMethod, PipeRouteHandler } from "../core/types";
 
 /*** route handler ***/
-export const optionsRequestRoute = (methods: HTTPMethod[]): PipeRoute<void> => {
-    return {
-        handler: async (ctx) => {
-            ctx.res.setHeader('Allow', methods.join(', '));
-        }
+export const optionsRequestRoute = (methods: HTTPMethod[]): PipeRouteHandler<void> => {
+    return async (ctx) => {
+        ctx.res.setHeader('Allow', methods.join(', '));
     }
 }

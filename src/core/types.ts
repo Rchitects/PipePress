@@ -1,9 +1,7 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
 
-/**
- * router types
- */
+/*** router types ***/
 export type HTTPMethod =
     | "GET"
     | "POST"
@@ -33,26 +31,17 @@ export type PipeStage<Res> = {
     handler: PipeStageHandler<Res>;
     serializer?: stringyfy<Res>;    // TODO: use fast-json
 }
-export type PipeRoute<Res> = {
-    handler: PipeRouteHandler<Res>;
-    serializer?: stringyfy<Res>;    // TODO: use fast-json
-}
 export type Route = {
     method: HTTPMethod;
     path: string;
-    handler: PipeRoute<any>;
+    handler: PipeRouteHandler<any>;
     stages?: PipeStage<any>[];
+    body?: any;
+    serializer?: stringyfy<any>;    // TODO: use fast-json
 }
-export type RouteCompiled = {
-    method: HTTPMethod;
-    fullPath: string;
-    pipeline: PipeStage<any>[];
-    handler: PipeRoute<any>;
-}
+export type RouteOptions = Pick<Route, 'stages' | 'body' | 'serializer'>;
 
-/**
- * PipeResponse types
- */
+/*** reponse types ***/
 export const HTTPStatus = {
     // success
     OK: 200,
@@ -72,3 +61,8 @@ export type HTTPContentType =
     | 'text/plain'
     | 'application/x-www-form-urlencoded';
 export type stringyfy<T> = (data: T) => string;
+
+/*** pipepress types ***/
+export type PipePressConfig = {
+    maxBodyLength: number;
+}
