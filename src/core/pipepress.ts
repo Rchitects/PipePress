@@ -70,7 +70,7 @@ export class PipePress extends Router {
                     }
 
                     /* parse body */
-                    await parseAndValidateBody(ctx, route);
+                    await parseAndValidateBody(ctx, route, { limit: this._config.maxBodyLength });
 
                     /* main handler */
                     const mainRes = await route.handler(ctx);

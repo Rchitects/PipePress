@@ -11,7 +11,7 @@ const logger: PipeStage<void> = {
 }
 /*** router ***/
 /*** pipepress ***/
-const app = new PipePress();
+const app = new PipePress({ maxBodyLength: 100 });
 
 /* global stages */
 app.use(logger);
@@ -23,6 +23,9 @@ app.get('/error', async (ctx) => {
 
 app.post('/data', { body: true }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
+});
+app.post('/ping', { body: true }, async (ctx) => {
+    return { ...ctx.body };
 });
 
 /* router */

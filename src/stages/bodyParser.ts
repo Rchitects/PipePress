@@ -46,7 +46,7 @@ export const parseAndValidateBody = async (ctx: PipeContext, route: Route, optio
     if (opts.limit > 0 && len > opts.limit) {
         /* body to big */
         // TODO: 413 error
-        ctx.req.destroy();
+        ctx.req.resume();   // TODO: give him hard cut-off with destroy?
         throw new BadRequestPipeErr('Payload is to big');
     }
 
