@@ -1,73 +1,84 @@
-/*** imports ***/
-import { PipePress, Router, PipeStage } from "../src/index";
+// /*** imports ***/
+// import { PipePress, Router, PipeStage } from "../src/index";
+// import { SchemaTypes } from "../src/core/validation";
 
-/*** pre-defined stages ***/
-const logger: PipeStage<void> = {
-    handler: async (ctx) => {
-        ctx.res.on('finish', () => {
-            console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
-        })
-    }
-}
-/*** router ***/
-/*** pipepress ***/
-const app = new PipePress({ maxBodyLength: 100 });
+// /*** pre-defined stages ***/
+// const logger: PipeStage<void> = {
+//     handler: async (ctx) => {
+//         ctx.res.on('finish', () => {
+//             console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
+//         })
+//     }
+// }
+// /*** router ***/
+// /*** pipepress ***/
+// const app = new PipePress({ maxBodyLength: 100 });
 
-/* global stages */
-app.use(logger);
+// /* global stages */
+// app.use(logger);
 
-/* routes */
-app.get('/error', async (ctx) => {
-    throw new Error('WTF IS THIS');
-});
+// /* routes */
+// app.get('/error', async (ctx) => {
+//     throw new Error('WTF IS THIS');
+// });
 
-app.post('/data', { body: true }, async (ctx) => {
-    return { status: 'IO', message: 'Created', ...ctx.body };
-});
-app.post('/ping', { body: true }, async (ctx) => {
-    return { ...ctx.body };
-});
+// app.post('/data', { body: true }, async (ctx) => {
+//     return { status: 'IO', message: 'Created', ...ctx.body };
+// });
+// app.post('/ping', { body: true }, async (ctx) => {
+//     return { ...ctx.body };
+// });
 
-/* router */
-const router = new Router();
-router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get('/:id', async (ctx) => {
-    console.log('Get user with id ', ctx.params.id);
-    return { name: 'Johnny', id: ctx.params.id, created: new Date() };
-});
-router.get('/all', {
-    stages: [{
-        handler: async (ctx) => { console.log('Get all users private stage') }
-    }]
-}, async (ctx) => {
-    return {
-        users: [
-            { name: 'Johnny', id: '1', created: new Date() },
-            { name: 'Bob', id: '2', created: new Date() }
-        ]
-    };
-});
-app.mount('/user', router);
+// /* router */
+// const router = new Router();
+// router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
+// router.get('/:id', async (ctx) => {
+//     console.log('Get user with id ', ctx.params.id);
+//     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
+// });
+// router.get('/all', {
+//     stages: [{
+//         handler: async (ctx) => { console.log('Get all users private stage') }
+//     }]
+// }, async (ctx) => {
+//     return {
+//         users: [
+//             { name: 'Johnny', id: '1', created: new Date() },
+//             { name: 'Bob', id: '2', created: new Date() }
+//         ]
+//     };
+// });
+// app.mount('/user', router);
 
-/* create routes */
-app.build();
+// /* create routes */
+// app.build();
 
-/* start server */
-app.listen(4000)
-    .then(() => {
-        console.log('Running');
-    })
-    .catch((err) => {
-        console.error(err);
-        process.exit(1);
-    });
+// /* start server */
+// app.listen(4000)
+//     .then(() => {
+//         console.log('Running');
+//     })
+//     .catch((err) => {
+//         console.error(err);
+//         process.exit(1);
+//     });
 
 
-process.on('SIGTERM', async () => {
-    await app.close();
-    process.exit(0);
-});
-process.on('SIGINT', async () => {
-    await app.close();
-    process.exit(0);
-});
+// process.on('SIGTERM', async () => {
+//     await app.close();
+//     process.exit(0);
+// });
+// process.on('SIGINT', async () => {
+//     await app.close();
+//     process.exit(0);
+// });
+
+import { SchemaTypes, validateAndParseSchema } from "../src/core/validation";
+
+let a = validateAndParseSchema({
+    name: SchemaTypes.String(),
+    age: SchemaTypes.Number().isOptional(),
+    createdAt: SchemaTypes.Date()
+}, { name: 123 });
+
+console.log(a);

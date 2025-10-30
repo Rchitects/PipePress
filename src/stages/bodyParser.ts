@@ -14,28 +14,6 @@ const DEFAULT_OPTS: Required<BodyParserOptions> = {
 }
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
-/*** functions ***/
-function isIsoDate(str: any): boolean {
-    if (str === null || str === undefined) return false;
-    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(str);
-}
-function parseISODate(obj: any): any {
-    if (obj == null || typeof obj !== 'object') return obj;
-
-    for (const key of Object.keys(obj)) {
-        const value = obj[key];
-
-        if (typeof value === 'string' && isIsoDate(value)) {
-            obj[key] = new Date(value);
-        }
-        else if (typeof value === 'object') {
-            parseISODate(value); // recursion for nested objects
-        }
-    }
-    return obj;
-}
-
-
 /*** body-parser stage ***/
 export const parseAndValidateBody = async (ctx: PipeContext, route: Route, options: Partial<BodyParserOptions> = {}): Promise<void> => {
     const opts = { ...DEFAULT_OPTS, ...options };
