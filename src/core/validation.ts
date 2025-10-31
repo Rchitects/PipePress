@@ -120,11 +120,81 @@ class DateType extends ValidatorType<Date> {
         throw new TypeError('is not a valid Date');
     }
 }
+class ArrayType<TItem = any> extends ValidatorType<TItem[]> {
+    private _itemValidator?: ValidatorType<TItem, boolean>;
+
+    validate(value: any): TItem[] {
+        if (!Array.isArray(value)) throw new TypeError('is not an array');
+        if (!this._itemValidator) return value.slice() as TItem[];
+
+        const parsed: TItem[] = [];
+        for (let i = 0; i < value.length; i++) {
+            try {
+                parsed.push(this._itemValidator.validate(value[i]));
+            } catch (e) {
+                if (e instanceof TypeError) {
+                    throw new TypeError(`element[${i}] ${e.message}`);
+                }
+                throw e;
+            }
+        }
+        return parsed;
+    }
+
+    of<T extends TItem = TItem>(itemValidator: ValidatorType<T, boolean>): ArrayType<T> {
+        (this as unknown as any)._itemValidator = itemValidator;
+        return this as unknown as ArrayType<T>;
+    }
+}
+class ObjectType<TSchema extends SchemaDefinition = any> extends ValidatorType<ParsedSchema<TSchema>> {
+    private _schema?: TSchema;
+
+    of<T extends SchemaDefinition>(schema: T): ObjectType<T> {
+        (this as unknown as any)._schema = schema;
+        return this as unknown as ObjectType<T>;
+    }
+
+    validate(value: any): ParsedSchema<TSchema> {
+        if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
+            throw new TypeError('is not an object');
+        }
+
+        /* wihtout schema just provide a copy without any further validation */
+        if (!this._schema) {
+            return { ...value } as ParsedSchema<TSchema>;
+        }
+
+        /* loop through entrys (keys) and validate / parsed them */
+        const result: any = {};
+
+        for (const key in this._schema) {
+            const curSchema = this._schema[key];
+
+            try {
+                curSchema.checkRequired(key, value);
+
+                if (key in value) {
+                    const parsed = curSchema.validate(value[key]);
+                    result[key] = parsed;
+                }
+            } catch (e) {
+                if (e instanceof TypeError) {
+                    throw new TypeError(`${key} ${e.message}`);
+                }
+                throw e;
+            }
+        }
+
+        return result;
+    }
+}
 
 /*** export validator types ***/
 export const SchemaTypes = {
     String: validator(StringType),
     Number: validator(NumberType),
     Boolean: validator(BooleanType),
-    Date: validator(DateType)
+    Date: validator(DateType),
+    Array: validator(ArrayType),
+    Object: validator(ObjectType)
 }
