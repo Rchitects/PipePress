@@ -15,35 +15,6 @@ function validator<T extends ValidatorType<any>>(type: { new(): T }) {
         return new type();
     }
 }
-export function validateAndParseSchema<T extends SchemaDefinition>(schema: T, source: any): ParsedSchema<T> {
-    const result: any = {};
-
-    if (source === undefined || source === null || Object.keys(source).length === 0) throw new TypeError('Validation source is missing / undefined');
-
-    for (const key in schema) {
-        const curSchema = schema[key];
-
-        try {
-            /* check optinal */
-            curSchema.checkRequired(key, source);
-
-            if (key in source) {
-                /* key was found, validate even if optional or not */
-                const parsed = curSchema.validate(source[key])
-                result[key] = parsed;
-            }
-        }
-        catch (e) {
-            if (e instanceof TypeError) {
-                throw new TypeError(`${key} ${e.message}`);
-            }
-            throw e;
-        }
-
-    }
-
-    return result;
-}
 
 /*** basic validation type ***/
 abstract class ValidatorType<T, Optional extends boolean = false> {
@@ -190,7 +161,7 @@ class ObjectType<TSchema extends SchemaDefinition = any> extends ValidatorType<P
 }
 
 /*** export validator types ***/
-export const SchemaTypes = {
+export const PipeTypes = {
     String: validator(StringType),
     Number: validator(NumberType),
     Boolean: validator(BooleanType),

@@ -1,6 +1,5 @@
 /*** imports ***/
-import { PipePress, Router, PipeStage } from "../src/index";
-import { SchemaTypes } from "../src/core/validation";
+import { PipePress, PipeStage, Router } from "../src/index";
 
 /*** pre-defined stages ***/
 const logger: PipeStage<void> = {
