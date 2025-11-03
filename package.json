@@ -5,11 +5,20 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./validation": {
+      "import": "./dist/core/validation.mjs",
+      "require": "./dist/core/validation.js"
+    }
+  },
   "scripts": {
-    "build": "tsup src/index.ts --dts --format esm,cjs --out-dir dist",
-    "dev": "tsup src/index.ts --watch",
-    "example:build": "tsc example/index.ts --outDir dist --esModuleInterop",
-    "example:run": "node dist/example/index.js",
+    "build": "tsup",
+    "dev:example": "npm run build && npm run run:example",
+    "run:example": "ts-node example/index.ts",
     "test": "vitest run"
   },
   "keywords": [],
@@ -28,6 +37,7 @@
     "dist"
   ],
   "dependencies": {
-    "find-my-way": "^9.3.0"
+    "find-my-way": "^9.3.0",
+    "ts-node": "^10.9.2"
   }
 }

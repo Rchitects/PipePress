@@ -161,7 +161,7 @@ class ObjectType<TSchema extends SchemaDefinition = any> extends ValidatorType<P
 }
 
 /*** export validator types ***/
-export const PipeTypes = {
+export default {
     String: validator(StringType),
     Number: validator(NumberType),
     Boolean: validator(BooleanType),
