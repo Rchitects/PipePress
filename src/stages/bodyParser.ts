@@ -1,5 +1,5 @@
 /*** imports ***/
-import { BadRequestPipeErr } from "../core/error";
+import { BadRequestPipeErr, ValidationPipeErr } from "../core/error";
 import { HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/types";
 import { isContentType } from "../core/utils";
 
@@ -15,7 +15,7 @@ const DEFAULT_OPTS: Required<BodyParserOptions> = {
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
 /*** body-parser stage ***/
-export const bodyParseAndValidateStage = (route: Route, options: BodyParserOptions): PipeStage<any> => {
+export const parseAndValidateBodyStage = (route: Route, options: BodyParserOptions): PipeStage<any> => {
     const opts = { ...DEFAULT_OPTS, ...options };
     return {
         handler: async (ctx) => {
@@ -55,7 +55,7 @@ export const bodyParseAndValidateStage = (route: Route, options: BodyParserOptio
             /* parse data */
             const rawData = Buffer.concat(chunks);
             const contentType: HTTPContentType = ctx.req.headers['content-type'] as HTTPContentType;
-
+            let validate = true;
             try {
                 if (isContentType(contentType, 'application/json')) {
                     ctx.body = JSON.parse(rawData.toString('utf-8'));
@@ -64,6 +64,7 @@ export const bodyParseAndValidateStage = (route: Route, options: BodyParserOptio
                     ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
                 }
                 else {
+                    validate = false;
                     ctx.body = rawData;
                 }
             }
@@ -71,7 +72,18 @@ export const bodyParseAndValidateStage = (route: Route, options: BodyParserOptio
                 throw new BadRequestPipeErr('Could not parse request body.');
             }
 
-            /* TODO: body validation via route.body */
+            /* validate & transform body */
+            if (route.body && validate) {
+                try {
+                    ctx.body = route.body.validate(ctx.body);
+                }
+                catch (e) {
+                    if (e instanceof TypeError) {
+                        throw new ValidationPipeErr(e.message);
+                    }
+                    throw new BadRequestPipeErr('Request body validation failed (unknown failure)');
+                }
+            }
         }
     };
 }

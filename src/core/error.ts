@@ -56,6 +56,16 @@ export class NotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
         }
     }
     constructor(public method: HTTPMethod, public path: string, message: string = 'URL not found') {
-        super('NptFoundPipeErr', message, HTTPStatus.NOT_FOUND, notFoundPipeErrSerializer);
+        super('NotFoundPipeErr', message, HTTPStatus.NOT_FOUND, notFoundPipeErrSerializer);
+    }
+}
+export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {    // TODO: create own schema with more informations
+    constructor(message: string) {
+        super('ValidationPipeErr', message, HTTPStatus.BAD_REQUEST, badRequestPipeErrSerializer)
+    }
+    protected getPayload(): BadRequestPipeErrPayload | undefined {
+        return {
+            message: this.message
+        }
     }
 }

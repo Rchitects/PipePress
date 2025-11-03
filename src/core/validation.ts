@@ -17,8 +17,8 @@ function validator<T extends ValidatorType<any>>(type: { new(): T }) {
 }
 
 /*** basic validation type ***/
-abstract class ValidatorType<T, Optional extends boolean = false> {
-    private _optional: Optional = false as Optional;
+export abstract class ValidatorType<T, Optional extends boolean = false> {
+    protected _optional: Optional = false as Optional;
 
     abstract validate(value: any): T;
     isOptional(): ValidatorType<T, true> {
@@ -117,12 +117,12 @@ class ArrayType<TItem = any> extends ValidatorType<TItem[]> {
         return this as unknown as ArrayType<T>;
     }
 }
-class ObjectType<TSchema extends SchemaDefinition = any> extends ValidatorType<ParsedSchema<TSchema>> {
+class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends ValidatorType<ParsedSchema<TSchema>, Optional> {
     private _schema?: TSchema;
 
-    of<T extends SchemaDefinition>(schema: T): ObjectType<T> {
+    of<T extends SchemaDefinition>(schema: T): ObjectType<T, Optional> {
         (this as unknown as any)._schema = schema;
-        return this as unknown as ObjectType<T>;
+        return this as unknown as ObjectType<T, Optional>;
     }
 
     validate(value: any): ParsedSchema<TSchema> {

@@ -1,5 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
+import { ValidatorType } from "./validation";
 
 /*** router types ***/
 export type HTTPMethod =
@@ -36,7 +37,7 @@ export type Route = {
     path: string;
     handler: PipeRouteHandler<any>;
     stages?: PipeStage<any>[];
-    body?: any;
+    body?: ValidatorType<any, boolean>;
     serializer?: stringyfy<any>;    // TODO: use fast-json
 }
 export type RouteOptions = Pick<Route, 'stages' | 'body' | 'serializer'>;

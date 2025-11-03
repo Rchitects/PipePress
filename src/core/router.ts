@@ -1,5 +1,5 @@
 /*** imports ***/
-import { bodyParseAndValidateStage } from "../stages/bodyParser";
+import { parseAndValidateBodyStage } from "../stages/bodyParser";
 import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions } from "./types";
 
 /*** definition ***/
@@ -67,7 +67,7 @@ export class Router {
             const routeStages = [
                 ...inheritedStages,
                 ...this._stages,
-                bodyParseAndValidateStage(route, { limit: this._routerConfig.maxBodyLength }),
+                parseAndValidateBodyStage(route, { limit: this._routerConfig.maxBodyLength }),
                 ...(route.stages || [])
             ];
             return {

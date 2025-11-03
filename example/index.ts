@@ -1,8 +1,6 @@
-/*** imports ***/
-import { PipePress, PipeStage, Router } from "../src/index";
-// import val from "pipepress/validation";
-// import { } from "pipepress";
-
+/*** imports (compiled) ***/
+import { PipePress, PipeStage, Router } from "pipepress";
+import val from "pipepress/validation";
 
 /*** pre-defined stages ***/
 const logger: PipeStage<void> = {
@@ -24,10 +22,10 @@ app.get('/error', async (ctx) => {
     throw new Error('WTF IS THIS');
 });
 
-app.post('/data', { body: true }, async (ctx) => {
+app.post('/data', { body: val.Object().of({ name: val.String(), age: val.Number().isOptional() }) }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
-app.post('/ping', { body: true }, async (ctx) => {
+app.post('/ping', { body: val.Object().isOptional() }, async (ctx) => {
     return { ...ctx.body };
 });
 
