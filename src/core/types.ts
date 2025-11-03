@@ -63,6 +63,7 @@ export type HTTPContentType =
 export type stringyfy<T> = (data: T) => string;
 
 /*** pipepress types ***/
-export type PipePressConfig = {
-    maxBodyLength: number;
+export type PipeRouterConfig = {
+    maxBodyLength?: number;
 }
+export type PipePressConfig = PipeRouterConfig

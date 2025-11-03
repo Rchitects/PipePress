@@ -1,5 +1,11 @@
 /*** imports ***/
-import type { HTTPMethod, PipeRouteHandler, PipeStage, Route, RouteOptions } from "./types";
+import { bodyParseAndValidateStage } from "../stages/bodyParser";
+import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions } from "./types";
+
+/*** definition ***/
+const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
+    maxBodyLength: 0
+}
 
 /*** class ***/
 export class Router {
@@ -7,6 +13,11 @@ export class Router {
     protected _stages: PipeStage<any>[] = [];
     protected _routes: Route[] = [];
     protected _children: { prefix: string, router: Router }[] = [];
+    protected _routerConfig: Required<PipeRouterConfig>;
+
+    constructor(config: PipeRouterConfig = {}) {
+        this._routerConfig = { ...DEFAULT_ROUTER_CONFIG, ...config };
+    }
 
     /*** public functions ***/
     // TODO: Typesafety
@@ -45,22 +56,33 @@ export class Router {
     }
 
     collectRoutes(prefix: string = '', inheritedStages: PipeStage<any>[] = []): Route[] {
-        const combStages = [...inheritedStages, ...this._stages];
-
         /* collect own routes */
         const routes: Route[] = this._routes.map((route) => {
+            /* build route pipeline
+                1) global / inherited stages
+                2) router stages
+                2) body parser
+                3) route-stages
+            **/
+            const routeStages = [
+                ...inheritedStages,
+                ...this._stages,
+                bodyParseAndValidateStage(route, { limit: this._routerConfig.maxBodyLength }),
+                ...(route.stages || [])
+            ];
             return {
                 method: route.method,
                 path: prefix + route.path,
                 handler: route.handler,
-                stages: [...combStages, ...(route.stages || [])],
+                stages: routeStages,
                 body: route.body,
                 serializer: route.serializer
             } as Route;
         });
         /* get sub routes */
+        const inheritedStagesNext = [...inheritedStages, ...this._stages];
         for (const { prefix: subPrefix, router } of this._children) {
-            routes.push(...router.collectRoutes(prefix + subPrefix, combStages));
+            routes.push(...router.collectRoutes(prefix + subPrefix, inheritedStagesNext));
         }
 
         return routes;

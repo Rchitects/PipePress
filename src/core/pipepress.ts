@@ -1,14 +1,13 @@
 /*** imports ***/
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
-import { parseAndValidateBody } from "../stages/bodyParser";
 import { optionsRequestRoute } from "../stages/optionsHandler";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
 import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipePressConfig, PipeResponse, Route } from "./types";
 
 /*** definitions ***/
-const DEFAULT_CONFIG: PipePressConfig = {
+const DEFAULT_CONFIG: Required<PipePressConfig> = {
     maxBodyLength: 0
 }
 
@@ -20,15 +19,15 @@ export class PipePress extends Router {
     private _server: http.Server | undefined;
     private _allowedMethods: Set<HTTPMethod> = new Set();
     private _notFoundCustom: Pick<Route, 'handler' | 'serializer'> | undefined;   // TODO: add method to use one handler
-    private _config: PipePressConfig;
+    private _pipePressConfig: PipePressConfig;
 
-    constructor(options: Partial<PipePressConfig> = {}) {
-        super();
+    constructor(options: PipePressConfig = {}) {
+        super({ ...options });
         this._reqRouter = findMyWay({
             ignoreTrailingSlash: true,
             ignoreDuplicateSlashes: true
         });
-        this._config = { ...DEFAULT_CONFIG, ...options };
+        this._pipePressConfig = { ...DEFAULT_CONFIG, ...options };
     }
 
     /*** public functions ***/
@@ -69,9 +68,6 @@ export class PipePress extends Router {
                         }
                     }
 
-                    /* parse body */
-                    await parseAndValidateBody(ctx, route, { limit: this._config.maxBodyLength });
-
                     /* main handler */
                     const mainRes = await route.handler(ctx);
 
@@ -97,10 +93,6 @@ export class PipePress extends Router {
         }
 
         /* dev. output TODO: */
-        // console.log(`Methods: ${Array.from(this._allowedMethods).join(',')}`);
-        // allRoutes.map((route) => {
-        //     console.log(`[${route.method}] ${route.path} - Stages: ${route.stages?.length || 0}`);
-        // })
         console.log(this._reqRouter.prettyPrint());
 
         this._build = true;
