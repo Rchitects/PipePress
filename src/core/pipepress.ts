@@ -143,11 +143,18 @@ export class PipePress extends Router {
         }
     }
     private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: Params): PipeContext {
+        /* extract query paramters */
+        const reqURL = new URL(req.url || '', `http://${req.headers.host}`);   // TODO: base-url needed?
+        const queryParams: Record<string, string> = {};
+        for (const [param, value] of reqURL.searchParams.entries()) {
+            queryParams[param] = value;
+        }
+        /* create context */
         const ctx: PipeContext = {
             req,
             res,
             params,
-            query: {}    // TODO: catch query params
+            query: queryParams
         };
         return ctx;
     }

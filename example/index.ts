@@ -6,7 +6,13 @@ import val from "pipepress/validation";
 const logger: PipeStage<void> = {
     handler: async (ctx) => {
         ctx.res.on('finish', () => {
-            console.log(`[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url}`);
+            let msg = `[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url} `;
+            if (ctx.query) {
+                msg += Object.entries(ctx.query).map(([key, value]) => {
+                    return `${key} = ${value}`;
+                }).join(',');
+            }
+            console.log(msg);
         })
     }
 }
