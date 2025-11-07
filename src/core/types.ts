@@ -14,13 +14,14 @@ export type HTTPMethod =
     | "OPTIONS"
     | "HEAD";
 export type Params = { [key: string]: string | undefined }
-export type PipeContextInput<B = undefined> = {
+export type PipeContextInput<B = undefined, P = undefined> = {
     body?: B
+    params?: P
 }
-export type PipeContext<T extends PipeContextInput> = {
+export type PipeContext<T extends PipeContextInput, P extends Params> = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: Params;
+    params: P;
     query: Record<string, string>;
     body: T["body"] extends undefined ? undefined : T["body"];
     [key: string]: any;
@@ -31,10 +32,10 @@ export type PipeResponse<Body = any> = {
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;    // TODO: use fast-json
 }
-export type PipeStageHandler<Body> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
-export type PipeRouteHandler<Ctx extends PipeContextInput = {}, Res = void> = (ctx: PipeContext<Ctx>) => MaybePromise<Res>;
+export type PipeStageHandler<Body, Params> = (ctx: PipeContext<any, any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
+export type PipeRouteHandler<Ctx extends PipeContextInput = {}, Res = void, P extends Params = {}> = (ctx: PipeContext<Ctx, P>) => MaybePromise<Res>;
 export type PipeStage<Res> = {
-    handler: PipeStageHandler<Res>;
+    handler: PipeStageHandler<Res, any>;
     serializer?: stringyfy<Res>;    // TODO: use fast-json
 }
 export type Route = {

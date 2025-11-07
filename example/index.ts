@@ -28,17 +28,23 @@ app.get('/error', async (ctx) => {
     throw new Error('WTF IS THIS');
 });
 
-app.post('/data', { body: val.Object().of({ name: val.String(), age: val.Number().isOptional() }) }, async (ctx) => {
+
+const dataBody = val.Object().of({
+    name: val.String(),
+    age: val.Number().isOptional()
+});
+app.post('/data', { body: dataBody }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
-app.post('/ping', { body: val.Object().isOptional() }, async (ctx) => {
+const pingBody = val.Object().isOptional();
+app.post('/ping', { body: pingBody }, async (ctx) => {
     return { ...(ctx.body || {}) };
 });
 
 /* router */
 const router = new Router();
 router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get('/:id', async (ctx) => {
+router.get<any, any, { id: string }>('/:id', async (ctx) => {
     console.log('Get user with id ', ctx.params.id);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });
