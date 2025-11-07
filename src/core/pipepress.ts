@@ -142,7 +142,7 @@ export class PipePress extends Router {
             this._handleNotFound(req, res);
         }
     }
-    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: Params): PipeContext {
+    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: Params): PipeContext<any> {
         /* extract query paramters */
         const reqURL = new URL(req.url || '', `http://${req.headers.host}`);   // TODO: base-url needed?
         const queryParams: Record<string, string> = {};
@@ -150,11 +150,12 @@ export class PipePress extends Router {
             queryParams[param] = value;
         }
         /* create context */
-        const ctx: PipeContext = {
+        const ctx: PipeContext<{ body: undefined }> = {
             req,
             res,
             params,
-            query: queryParams
+            query: queryParams,
+            body: undefined
         };
         return ctx;
     }
@@ -186,7 +187,7 @@ export class PipePress extends Router {
         }
         res.end(body);
     }
-    private _handleError(e: any, ctx: PipeContext) {
+    private _handleError(e: any, ctx: PipeContext<any>) {
         try {
             if (e instanceof PipeError) {
                 this._sendResponse(ctx.res, e.toPipeResponse());

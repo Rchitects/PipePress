@@ -4,6 +4,7 @@ export type SchemaDefinition = Record<string, ValidatorType<any, boolean>>;
 type ParsedSchema<T extends SchemaDefinition> =
     { [K in keyof T as T[K] extends ValidatorType<any, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
     { [K in keyof T as T[K] extends ValidatorType<any, true> ? never : K]: ReturnType<T[K]["validate"]> };
+export type ParsedType<T> = T extends ValidatorType<any> ? ReturnType<T["validate"]> : undefined;
 
 /*** support functions ***/
 function isIsoDate(str: any): boolean {

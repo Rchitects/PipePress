@@ -32,7 +32,7 @@ app.post('/data', { body: val.Object().of({ name: val.String(), age: val.Number(
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
 app.post('/ping', { body: val.Object().isOptional() }, async (ctx) => {
-    return { ...ctx.body };
+    return { ...(ctx.body || {}) };
 });
 
 /* router */

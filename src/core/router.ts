@@ -1,6 +1,7 @@
 /*** imports ***/
 import { parseAndValidateBodyStage } from "../stages/bodyParser";
 import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions } from "./types";
+import validation, { ParsedType, ValidatorType } from "./validation";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -27,9 +28,9 @@ export class Router {
         return this;
     }
 
-    on(method: HTTPMethod, path: string, handler: PipeRouteHandler<any>): void;
-    on(method: HTTPMethod, path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    on(method: HTTPMethod, path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    on(method: HTTPMethod, path: string, handler: PipeRouteHandler<any, any>): void;
+    on(method: HTTPMethod, path: string, options: RouteOptions<any>, handler: PipeRouteHandler<any, any>): void;
+    on(method: HTTPMethod, path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions<any>, handler?: PipeRouteHandler<any>): void {
         if (typeof optionsOrHandler === 'function') {
             /* no options */
             this._routes.push({
@@ -90,9 +91,17 @@ export class Router {
 
 
     /*** public HTTP functions ***/
-    get(path: string, handler: PipeRouteHandler<any>): void;
-    get(path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    get(path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    get<B extends ValidatorType<any, boolean> | undefined, Res = any>(path: string, handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>): void;
+    get<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        options: RouteOptions<B>,
+        handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void;
+    get<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        optionsOrHandler: RouteOptions<B> | PipeRouteHandler<{ body: ParsedType<B> }, Res>,
+        handler?: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void {
         if (typeof optionsOrHandler === 'function') {
             this.on('GET', path, optionsOrHandler);
         }
@@ -100,9 +109,17 @@ export class Router {
             this.on('GET', path, optionsOrHandler, handler!);
         }
     }
-    post(path: string, handler: PipeRouteHandler<any>): void;
-    post(path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    post(path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    post<B extends ValidatorType<any, boolean> | undefined, Res = any>(path: string, handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>): void;
+    post<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        options: RouteOptions<B>,
+        handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void;
+    post<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        optionsOrHandler: RouteOptions<B> | PipeRouteHandler<{ body: ParsedType<B> }, Res>,
+        handler?: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void {
         if (typeof optionsOrHandler === 'function') {
             this.on('POST', path, optionsOrHandler);
         }
@@ -111,9 +128,17 @@ export class Router {
         }
     }
 
-    put(path: string, handler: PipeRouteHandler<any>): void;
-    put(path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    put(path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    put<B extends ValidatorType<any, boolean> | undefined, Res = any>(path: string, handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>): void;
+    put<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        options: RouteOptions<B>,
+        handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void;
+    put<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        optionsOrHandler: RouteOptions<B> | PipeRouteHandler<{ body: ParsedType<B> }, Res>,
+        handler?: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void {
         if (typeof optionsOrHandler === 'function') {
             this.on('PUT', path, optionsOrHandler);
         }
@@ -122,9 +147,17 @@ export class Router {
         }
     }
 
-    patch(path: string, handler: PipeRouteHandler<any>): void;
-    patch(path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    patch(path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    patch<B extends ValidatorType<any, boolean> | undefined, Res = any>(path: string, handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>): void;
+    patch<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        options: RouteOptions<B>,
+        handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void;
+    patch<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        optionsOrHandler: RouteOptions<B> | PipeRouteHandler<{ body: ParsedType<B> }, Res>,
+        handler?: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void {
         if (typeof optionsOrHandler === 'function') {
             this.on('PATCH', path, optionsOrHandler);
         }
@@ -133,9 +166,17 @@ export class Router {
         }
     }
 
-    delete(path: string, handler: PipeRouteHandler<any>): void;
-    delete(path: string, options: RouteOptions, handler: PipeRouteHandler<any>): void;
-    delete(path: string, optionsOrHandler: PipeRouteHandler<any> | RouteOptions, handler?: PipeRouteHandler<any>): void {
+    delete<B extends ValidatorType<any, boolean> | undefined, Res = any>(path: string, handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>): void;
+    delete<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        options: RouteOptions<B>,
+        handler: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void;
+    delete<B extends ValidatorType<any, boolean> | undefined, Res = any>(
+        path: string,
+        optionsOrHandler: RouteOptions<B> | PipeRouteHandler<{ body: ParsedType<B> }, Res>,
+        handler?: PipeRouteHandler<{ body: ParsedType<B> }, Res>
+    ): void {
         if (typeof optionsOrHandler === 'function') {
             this.on('DELETE', path, optionsOrHandler);
         }
