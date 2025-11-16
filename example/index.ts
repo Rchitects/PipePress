@@ -1,5 +1,5 @@
 /*** imports (compiled) ***/
-import { PipePress, PipeStage, Router } from "pipepress";
+import { PipePress, PipeStage, RouteInput, Router } from "pipepress";
 import val from "pipepress/validation";
 
 /*** pre-defined stages ***/
@@ -44,7 +44,7 @@ app.post('/ping', { body: pingBody }, async (ctx) => {
 /* router */
 const router = new Router();
 router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get<any, any, { id: string }>('/:id', async (ctx) => {
+router.get<any, { id: string }>('/:id', async (ctx) => {
     console.log('Get user with id ', ctx.params.id);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });

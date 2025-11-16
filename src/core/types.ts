@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { ValidatorType } from "./validation";
+import { ParsedType, ValidatorType } from "./validation";
 
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
@@ -14,16 +14,12 @@ export type HTTPMethod =
     | "OPTIONS"
     | "HEAD";
 export type Params = { [key: string]: string | undefined }
-export type PipeContextInput<B = undefined, P = undefined> = {
-    body?: B
-    params?: P
-}
-export type PipeContext<T extends PipeContextInput, P extends Params> = {
+export type PipeContext<B = undefined, P = undefined, Q = undefined> = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: P;
-    query: Record<string, string>;
-    body: T["body"] extends undefined ? undefined : T["body"];
+    params: P
+    query: Q
+    body: ParsedType<B>;
     [key: string]: any;
 }
 export type PipeResponse<Body = any> = {
@@ -32,8 +28,8 @@ export type PipeResponse<Body = any> = {
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;    // TODO: use fast-json
 }
-export type PipeStageHandler<Body, Params> = (ctx: PipeContext<any, any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
-export type PipeRouteHandler<Ctx extends PipeContextInput = {}, Res = void, P extends Params = {}> = (ctx: PipeContext<Ctx, P>) => MaybePromise<Res>;
+export type PipeStageHandler<Body, Params> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
+export type PipeRouteHandler<B = undefined, P = undefined, Q = undefined> = (ctx: PipeContext<B, P, Q>) => MaybePromise<any>; // TODO: include response
 export type PipeStage<Res> = {
     handler: PipeStageHandler<Res, any>;
     serializer?: stringyfy<Res>;    // TODO: use fast-json
@@ -41,11 +37,16 @@ export type PipeStage<Res> = {
 export type Route = {
     method: HTTPMethod;
     path: string;
-    handler: PipeRouteHandler<any, any>;
+    handler: PipeRouteHandler<any, any, any>;
     stages?: PipeStage<any>[];
     body?: ValidatorType<any, boolean>;
     serializer?: stringyfy<any>;    // TODO: use fast-json
 }
+export type RouteInput = {
+    body?: ValidatorType<any, boolean>,
+    params?: Params;
+    query?: any;
+};
 export type RouteOptions<B extends ValidatorType<any, boolean> | undefined> = {
     stages?: PipeStage<any>[];
     body?: B;
