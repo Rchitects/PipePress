@@ -44,7 +44,8 @@ export class PipePress extends Router {
             path: '*',
             method: 'OPTIONS',
             stages: [...this._stages],
-            handler: optionsRequestRoute(Array.from(this._allowedMethods))
+            handler: optionsRequestRoute(Array.from(this._allowedMethods)),
+            serializer: JSON.stringify  // will not be called anyway
         }
         allRoutes.push(optionsRoute);
 

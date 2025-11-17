@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import val from "../../src/core/validation";
+import dt from "../../src/core/datatypes";
 
 describe('validation - basic types', () => {
     /* predefine validators */
-    const number = val.Number();
-    const string = val.String();
-    const boolean = val.Boolean();
+    const number = dt.Number();
+    const string = dt.String();
+    const boolean = dt.Boolean();
     /* number */
     it('String without numbers should not be parsed to number', () => {
         expect(() => {
@@ -70,9 +70,9 @@ describe('validation - basic types', () => {
     /* array */
     /* object */
     it('debug', () => {
-        const schema = val.Object().of({
-            name: val.String().isOptional(),
-            age: val.Number()
+        const schema = dt.Object({
+            name: dt.String().isOptional(),
+            age: dt.Number()
         });
         expect(() => {
             const parsed = schema.validate({});

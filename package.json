@@ -10,9 +10,9 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./validation": {
-      "import": "./dist/core/validation.mjs",
-      "require": "./dist/core/validation.js"
+    "./datatypes": {
+      "import": "./dist/core/datatypes.mjs",
+      "require": "./dist/core/datatypes.js"
     }
   },
   "scripts": {
@@ -26,6 +26,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/json-schema": "^7.0.15",
     "@types/node": "^24.9.1",
     "@vitest/coverage-v8": "^4.0.5",
     "tsconfig-paths": "^4.2.0",
@@ -37,6 +38,7 @@
     "dist"
   ],
   "dependencies": {
+    "fast-json-stringify": "^6.1.1",
     "find-my-way": "^9.3.0",
     "ts-node": "^10.9.2"
   }

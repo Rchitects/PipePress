@@ -1,5 +1,6 @@
 /*** import ***/
 import { stringyfy } from "./types";
+import dt from "./datatypes";
 
 /*** types for schemas ***/
 type PipeErrPayload<T> = {
@@ -15,13 +16,15 @@ export type NotFoundPipErrPayload = PipeErrPayload<{
 }>;
 
 /*** schemas for errors ***/
-// TODO: use fast-json-stringify for better performance
-export const defaultPipeErrSerializer: stringyfy<DefaultPipeErrPayload> = (data) => {
-    return JSON.stringify(data);
-}
-export const badRequestPipeErrSerializer: stringyfy<BadRequestPipeErrPayload> = (data) => {
-    return JSON.stringify(data);
-}
-export const notFoundPipeErrSerializer: stringyfy<NotFoundPipErrPayload> = (data) => {
-    return JSON.stringify(data);
-}
+export const DefaultPipeErrSchema = dt.Object({
+    message: dt.String(),
+    name: dt.String()
+});
+export const BadRequestPipeErrSchema = dt.Object({
+    message: dt.String()
+});
+export const NotFoundPipErrSchema = dt.Object({
+    message: dt.String(),
+    method: dt.String(),
+    path: dt.String()
+});

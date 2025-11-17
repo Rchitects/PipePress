@@ -1,6 +1,6 @@
 /*** imports (compiled) ***/
-import { PipePress, PipeStage, RouteInput, Router } from "pipepress";
-import val from "pipepress/validation";
+import { PipePress, PipeStage, Router } from "pipepress";
+import dt from "pipepress/datatypes";
 
 /*** pre-defined stages ***/
 const logger: PipeStage<void> = {
@@ -28,23 +28,35 @@ app.get('/error', async (ctx) => {
     throw new Error('WTF IS THIS');
 });
 
-
-const dataBody = val.Object().of({
-    name: val.String(),
-    age: val.Number().isOptional()
+const resp1 = dt.Object({
+    name: dt.String(),
+    age: dt.Number(),
+    birth: dt.Date().isOptional()
 });
+app.get('/birth', { response: resp1 }, async (ctx) => {
+    return {
+        age: 123,
+        name: 'Peter',
+    }
+});
+
+
+const dataBody = dt.Object({
+    name: dt.String(),
+    age: dt.Number().isOptional()
+});
+console.log(dataBody.toJSONSchema());
 app.post('/data', { body: dataBody }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
-const pingBody = val.Object().isOptional();
-app.post('/ping', { body: pingBody }, async (ctx) => {
+app.post('/ping', async (ctx) => {
     return { ...(ctx.body || {}) };
 });
 
 /* router */
 const router = new Router();
 router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get<any, { id: string }>('/:id', async (ctx) => {
+router.get<any, any, { id: string }>('/:id', async (ctx) => {
     console.log('Get user with id ', ctx.params.id);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });
