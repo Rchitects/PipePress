@@ -73,4 +73,9 @@ export type stringyfy<T> = (data: T) => string;
 export type PipeRouterConfig = {
     maxBodyLength?: number;
 }
-export type PipePressConfig = PipeRouterConfig
+export type PipeCorsConfig = {
+    preflight?: 'auto' | 'off';
+}
+export type PipePressConfig = PipeRouterConfig & {
+    cors?: PipeCorsConfig
+}

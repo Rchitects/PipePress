@@ -1,14 +1,17 @@
 /*** imports ***/
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
-import { optionsRequestRoute } from "../stages/optionsHandler";
+import { voidStageHandler } from "../stages/voidStageHandler";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipePressConfig, PipeResponse, Route } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCorsConfig, PipePressConfig, PipeResponse, Route } from "./types";
 
 /*** definitions ***/
-const DEFAULT_CONFIG: Required<PipePressConfig> = {
-    maxBodyLength: 0
+const DEFAULT_CONFIG: PipePressConfig = {
+    maxBodyLength: 0,
+}
+const DEFAULT_CORS_CONFIG: Required<PipeCorsConfig> = {
+    preflight: 'auto'
 }
 
 /*** class ***/
@@ -17,9 +20,9 @@ export class PipePress extends Router {
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _allowedMethods: Set<HTTPMethod> = new Set();
     private _notFoundCustom: Pick<Route, 'handler' | 'serializer'> | undefined;   // TODO: add method to use one handler
     private _pipePressConfig: PipePressConfig;
+    private _allowedMethods: Record<string, Set<HTTPMethod>> = {};
 
     constructor(options: PipePressConfig = {}) {
         super({ ...options });
@@ -27,7 +30,15 @@ export class PipePress extends Router {
             ignoreTrailingSlash: true,
             ignoreDuplicateSlashes: true
         });
+        /* merge configs */
         this._pipePressConfig = { ...DEFAULT_CONFIG, ...options };
+        if (this._pipePressConfig.cors) {
+            this._pipePressConfig.cors = { ...DEFAULT_CORS_CONFIG, ...this._pipePressConfig.cors };
+        }
+        /* add CORS stage if needed */
+        if (this._pipePressConfig.cors) {
+            this.use({ handler: this._corsStageHandler.bind(this) });
+        }
     }
 
     /*** public functions ***/
@@ -36,18 +47,33 @@ export class PipePress extends Router {
 
         const allRoutes = this.collectRoutes();
 
-        /* catch all the methods */
-        this._allowedMethods = new Set(allRoutes.map(_ => _.method)).add('OPTIONS');
+        /* generate CORS data */
+        if (this._pipePressConfig.cors) {
+            /* create map for all paths and their allowed methods */
+            for (const route of allRoutes) {
+                if (!this._allowedMethods[route.path]) {
+                    this._allowedMethods[route.path] = new Set();
+                }
+                this._allowedMethods[route.path].add(route.method);
+                /* add OPTIONS method if preflight is auto */
+                if (this._pipePressConfig.cors.preflight === 'auto') {
+                    this._allowedMethods[route.path].add('OPTIONS');
+                }
+            }
 
-        /* create route for OPTIONS request */
-        const optionsRoute: Route = {
-            path: '*',
-            method: 'OPTIONS',
-            stages: [...this._stages],
-            handler: optionsRequestRoute(Array.from(this._allowedMethods)),
-            serializer: JSON.stringify  // will not be called anyway
+            /* generate OPTIONS routes for all paths */
+            if (this._pipePressConfig.cors.preflight === 'auto') {
+                for (const [path, methods] of Object.entries(this._allowedMethods)) {
+                    allRoutes.push({
+                        method: 'OPTIONS',
+                        path: path,
+                        stages: [...this._stages],
+                        handler: voidStageHandler,
+                        serializer: JSON.stringify  // will not be called anyway
+                    });
+                }
+            }
         }
-        allRoutes.push(optionsRoute);
 
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
@@ -235,6 +261,20 @@ export class PipePress extends Router {
         catch (e) {
             // TODO: handle errors
             this._handleError(e, ctx);
+        }
+    }
+    private _corsStageHandler(ctx: PipeContext<any>) {
+        /* ORIGIN */
+        ctx.res.setHeader('Access-Control-Allow-Origin', '*');  // TODO: make configurable
+        /* METHODS */
+        const allowedMethods = this._allowedMethods[ctx.req.url || ''];
+        if (allowedMethods) {
+            ctx.res.setHeader('Access-Control-Allow-Methods', Array.from(allowedMethods).join(', '));
+        }
+        /* HEADERS */
+        const allowedHeaders = ctx.req.headers['access-control-request-headers']; // TODO: make configurable
+        if (allowedHeaders && allowedHeaders.length > 0) {
+            ctx.res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
         }
     }
 }

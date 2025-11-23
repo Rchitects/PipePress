@@ -18,7 +18,12 @@ const logger: PipeStage<void> = {
 }
 /*** router ***/
 /*** pipepress ***/
-const app = new PipePress({ maxBodyLength: 100 });
+const app = new PipePress({
+    maxBodyLength: 100,
+    cors: {
+        preflight: 'auto'
+    }
+});
 
 /* global stages */
 app.use(logger);
