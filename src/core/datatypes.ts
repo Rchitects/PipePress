@@ -9,7 +9,7 @@ type ParsedSchema<T extends SchemaDefinition> =
 export type ParsedType<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
 
 /*** support functions ***/
-function isIsoDate(str: any): boolean {
+export function isIsoDate(str: any): boolean {
     if (str === null || str === undefined) return false;
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(str);
 }
@@ -128,10 +128,8 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
             try {
                 parsed.push(this._itemValidator.validate(value[i]));
             } catch (e) {
-                if (e instanceof TypeError) {
-                    throw new TypeError(`element[${i}] ${e.message}`);
-                }
-                throw e;
+                // validate() will only throw TypeError
+                throw new TypeError(`element[${i}] ${(e as TypeError).message}`);
             }
         }
         return parsed;
@@ -185,10 +183,8 @@ class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolea
                     result[key] = parsed;
                 }
             } catch (e) {
-                if (e instanceof TypeError) {
-                    throw new TypeError(`${key} ${e.message}`);
-                }
-                throw e;
+                // validate() will only throw TypeError
+                throw new TypeError(`${key} ${(e as TypeError).message}`);
             }
         }
 
