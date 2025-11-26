@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true // tsup übernimmt das Emitting
+    "noEmit": true, // tsup übernimmt das Emitting
   },
   "include": [
     "src"
@@ -27,6 +27,7 @@
     "node_modules",
     "test",
     "example",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "benchmark"
   ]
 }
