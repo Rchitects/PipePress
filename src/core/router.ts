@@ -60,7 +60,6 @@ export class Router {
             });
         }
     }
-    // TODO: Typesafety
     mount(path: string, router: Router) {
         this._children.push({ prefix: path, router: router });
     }

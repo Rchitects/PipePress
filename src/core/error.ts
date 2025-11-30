@@ -1,79 +1,111 @@
 /*** imports ***/
 import { HTTPMethod } from "find-my-way";
-import { BadRequestPipeErrPayload, BadRequestPipeErrSchema, DefaultPipeErrPayload, DefaultPipeErrSchema, NotFoundPipErrPayload, NotFoundPipErrSchema } from "./schema";
 import { HTTPStatus, PipeResponse, stringyfy } from "./types";
 import { DataType } from "./datatypes";
 import fastJSON from "fast-json-stringify";
+import dt from "./datatypes";
+
+/*** types for schemas ***/
+type PipeErrBasePayload = {
+    message: string;
+};
+type DefaultPipeErrPayload = PipeErrBasePayload & {
+    errName: string;
+};
+type BadRequestPipeErrPayload = PipeErrBasePayload;  // TODO: enough?
+type NotFoundPipErrPayload = PipeErrBasePayload & {
+    method: string;
+    path: string;
+};
+type ContentTooLargePipeErrPayload = PipeErrBasePayload & {
+    allowed: number;
+    sent: number;
+};
+
+/*** schemas for errors ***/
+const DefaultPipeErrSchema = dt.Object({
+    message: dt.String(),
+    errName: dt.String()
+});
+const BadRequestPipeErrSchema = dt.Object({
+    message: dt.String()
+});
+const NotFoundPipErrSchema = dt.Object({
+    message: dt.String(),
+    method: dt.String(),
+    path: dt.String()
+});
+const ContentTooLargePipeErrSchema = dt.Object({
+    message: dt.String(),
+    allowed: dt.Number(),
+    sent: dt.Number()
+});
 
 /*** main class ***/
-export abstract class PipeError<T extends Record<string, string>> extends Error {
+// TODO: unforce user to use message in any error?
+export abstract class PipeError<T extends PipeErrBasePayload> {
     private _serializer?: stringyfy<T>;
-    constructor(name: string, message: string, public status: HTTPStatus, public response?: DataType<T, boolean>) {
-        super(message);
-        this.name = name;
-
+    static readonly exludedKeys: string[] = ['name', 'status', 'response', '_serializer'];
+    constructor(
+        public name: string,
+        public message: string,
+        public status: HTTPStatus,
+        public response?: DataType<T, boolean>
+    ) {
         /* create serializer */
         if (response) {
             this._serializer = fastJSON(response.toJSONSchema() as any);
         }
-
-        /* Fix für Error-Vererbung */
-        Object.setPrototypeOf(this, new.target.prototype);
     }
 
     /*** public function ***/
-    protected abstract getPayload(): T | undefined;
     public toPipeResponse(): PipeResponse<T> {
-        const body = this.getPayload();
+        /* generate body */
+        let clone: T = <T>{};
+        Object.assign(clone, this);
+        // remove unneeded / undefined properties
+        for (const key in clone) {
+            if (clone[key] === undefined) {
+                delete clone[key];
+            }
+            else if (PipeError.exludedKeys.includes(key)) {
+                delete clone[key];
+            }
+        }
+
+        /* return response */
         return {
             status: this.status,
-            body: body,
+            body: clone,
             serializer: this._serializer
         };
     }
 }
 /*** pre-defiened errors ***/
 export class DefaultPipeErr extends PipeError<DefaultPipeErrPayload> {
+    public errName: string;
     constructor(err: Error) {
-        super(err.name, err.message, HTTPStatus.INTERNAL_ERROR, DefaultPipeErrSchema)
-    }
-    protected getPayload(): DefaultPipeErrPayload {
-        return {
-            message: this.message,
-            name: this.name
-        };
+        super(err.name, err.message, HTTPStatus.INTERNAL_ERROR, DefaultPipeErrSchema);
+        this.errName = err.name;
     }
 }
 export class BadRequestPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
         super('BadRequestPipeErr', message, HTTPStatus.BAD_REQUEST, BadRequestPipeErrSchema);
     }
-    protected getPayload(): BadRequestPipeErrPayload {
-        return {
-            message: this.message
-        }
-    }
-
 }
 export class NotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
-    protected getPayload(): NotFoundPipErrPayload | undefined {
-        return {
-            message: this.message,
-            method: this.method,
-            path: this.path
-        }
-    }
     constructor(public method: HTTPMethod, public path: string, message: string = 'URL not found') {
         super('NotFoundPipeErr', message, HTTPStatus.NOT_FOUND, NotFoundPipErrSchema);
     }
 }
-export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {    // TODO: create own schema with more informations
+export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
         super('ValidationPipeErr', message, HTTPStatus.BAD_REQUEST, BadRequestPipeErrSchema)
     }
-    protected getPayload(): BadRequestPipeErrPayload | undefined {
-        return {
-            message: this.message
-        }
+}
+export class ContentTooLargePipeErr extends PipeError<ContentTooLargePipeErrPayload> {
+    constructor(public allowed: number, public sent: number) {
+        super('ContentTooLargePipeErr', `Payload is too large`, HTTPStatus.CONTENT_TOO_LARGE, ContentTooLargePipeErrSchema);
     }
 }

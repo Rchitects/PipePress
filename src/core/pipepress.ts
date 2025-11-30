@@ -4,13 +4,15 @@ import * as http from "http";
 import { voidStageHandler } from "../stages/voidStageHandler";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCorsConfig, PipePressConfig, PipeResponse, Route } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCORSConfig, PipePressConfig, PipeResponse, PipeStage, PipeStageHandler, Route } from "./types";
+import { DataType } from "./datatypes";
+import fastJSON from "fast-json-stringify";
 
 /*** definitions ***/
 const DEFAULT_CONFIG: PipePressConfig = {
     maxBodyLength: 0,
 }
-const DEFAULT_CORS_CONFIG: Required<PipeCorsConfig> = {
+const DEFAULT_CORS_CONFIG: Required<PipeCORSConfig> = {
     preflight: 'auto'
 }
 
@@ -20,7 +22,7 @@ export class PipePress extends Router {
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _notFoundCustom: Pick<Route, 'handler' | 'serializer'> | undefined;   // TODO: add method to use one handler
+    private _notFoundCustom: PipeStage<any> | undefined;
     private _pipePressConfig: PipePressConfig;
     private _allowedMethods: Record<string, Set<HTTPMethod>> = {};
 
@@ -113,14 +115,10 @@ export class PipePress extends Router {
                     }
                 }
                 catch (e) {
-                    // TODO: handle errors
                     this._handleError(e, ctx);
                 }
             });
         }
-
-        /* dev. output TODO: */
-        console.log(this._reqRouter.prettyPrint());
 
         this._build = true;
     }
@@ -155,6 +153,22 @@ export class PipePress extends Router {
                 res();
             }
         });
+    }
+
+    // TODO: remove serializer in the PipeStageHandler response?
+    setNotFoundHandler<T>(handler: PipeStageHandler<T>, response?: DataType<T, boolean>) {
+        const notFoundStage: PipeStage<T> = {
+            handler: handler
+        };
+        if (response) {
+            notFoundStage.serializer = fastJSON(response.toJSONSchema() as any);
+        }
+        this._notFoundCustom = notFoundStage;
+    }
+
+    prittyPrintRoutes(): string {
+        if (!this._build) throw new Error('build() was not called');
+        return this._reqRouter.prettyPrint();
     }
 
     /*** private functions ***/
@@ -215,6 +229,7 @@ export class PipePress extends Router {
         res.end(body);
     }
     private _handleError(e: any, ctx: PipeContext<any>) {
+        // TODO: add custome error handler?
         try {
             if (e instanceof PipeError) {
                 this._sendResponse(ctx.res, e.toPipeResponse());
@@ -224,7 +239,8 @@ export class PipePress extends Router {
                 this._sendResponse(ctx.res, err.toPipeResponse());
             }
             else {
-                // TODO: create some error for unknown failuires
+                const err = new DefaultPipeErr(new Error(e?.toString() || 'Unknown error'));
+                this._sendResponse(ctx.res, err.toPipeResponse());
             }
         }
         catch (e) {
@@ -251,7 +267,19 @@ export class PipePress extends Router {
             /* run not found handler */
             if (this._notFoundCustom) {
                 const res = await this._notFoundCustom.handler(ctx);
-                //TODO: send response
+                if (res) {
+                    /* if the handler did not set a serializer, use the custom one */
+                    if (!res.serializer && this._notFoundCustom.serializer) {
+                        res.serializer = this._notFoundCustom.serializer;
+                    }
+                    this._sendResponse(ctx.res, res);
+                }
+                /**
+                 * TODO:
+                 * the custom handler did not return anything, throw default error?
+                 * IF the handler already send a response, the sendResponse message will not sent again
+                 */
+                // throw new NotFoundPipeErr(req.method as HTTPMethod, req.url || '');
             }
             else {
                 /* create default not repsonse by throwing error*/
@@ -259,7 +287,6 @@ export class PipePress extends Router {
             }
         }
         catch (e) {
-            // TODO: handle errors
             this._handleError(e, ctx);
         }
     }

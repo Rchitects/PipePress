@@ -1,5 +1,5 @@
 /*** imports ***/
-import { BadRequestPipeErr, ValidationPipeErr } from "../core/error";
+import { BadRequestPipeErr, ContentTooLargePipeErr, ValidationPipeErr } from "../core/error";
 import { HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/types";
 import { isContentType } from "../core/utils";
 
@@ -25,9 +25,8 @@ export const parseAndValidateBodyStage = (route: Route, options: BodyParserOptio
             /* stop if payload to big */
             if (opts.limit > 0 && len > opts.limit) {
                 /* body to big */
-                // TODO: 413 error
                 ctx.req.resume();   // TODO: give him hard cut-off with destroy?
-                throw new BadRequestPipeErr(`Payload is to big - Allowed: ${opts.limit} / Sent: ${len}`);
+                throw new ContentTooLargePipeErr(opts.limit, len);
             }
 
             /* ignore body if not needed */

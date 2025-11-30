@@ -28,6 +28,14 @@ const app = new PipePress({
 /* global stages */
 app.use(logger);
 
+/* not found handler */
+// app.setNotFoundHandler<{ message: string }>(async (ctx) => {
+//     return {
+//         status: 404,
+//         body: { message: `The requested resource ${ctx.req.url} was not found` }
+//     };
+// }, dt.Object({ message: dt.String() }));
+
 /* routes */
 app.get('/error', async (ctx) => {
     throw new Error('WTF IS THIS');
@@ -50,7 +58,6 @@ const dataBody = dt.Object({
     name: dt.String(),
     age: dt.Number().isOptional()
 });
-console.log(dataBody.toJSONSchema());
 app.post('/data', { body: dataBody }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
@@ -81,6 +88,8 @@ app.mount('/user', router);
 
 /* create routes */
 app.build();
+
+console.log(app.prittyPrintRoutes());
 
 /* start server */
 app.listen(4000)

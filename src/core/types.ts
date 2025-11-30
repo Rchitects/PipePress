@@ -28,11 +28,11 @@ export type PipeResponse<Body = any> = {
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;
 }
-export type PipeStageHandler<Body, Params> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void;
-export type PipeRouteHandler<Res = any, B = undefined, P = undefined, Q = undefined> = (ctx: PipeContext<B, P, Q>) => MaybePromise<Res>; // TODO: include response
+export type PipeStageHandler<Body> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Res = any, B = undefined, P = undefined, Q = undefined> = (ctx: PipeContext<B, P, Q>) => MaybePromise<Res>;
 export type PipeStage<Res> = {
-    handler: PipeStageHandler<Res, any>;
-    serializer?: stringyfy<Res>;    // TODO: use fast-json
+    handler: PipeStageHandler<Res>;
+    serializer?: stringyfy<Res>;
 }
 export type Route = {
     method: HTTPMethod;
@@ -59,6 +59,7 @@ export const HTTPStatus = {
     UNAUTHORIZED: 401,
     FORBIDDEN: 403,
     NOT_FOUND: 404,
+    CONTENT_TOO_LARGE: 413,
     // server error
     INTERNAL_ERROR: 500
 } as const;
@@ -73,9 +74,9 @@ export type stringyfy<T> = (data: T) => string;
 export type PipeRouterConfig = {
     maxBodyLength?: number;
 }
-export type PipeCorsConfig = {
+export type PipeCORSConfig = {
     preflight?: 'auto' | 'off';
 }
 export type PipePressConfig = PipeRouterConfig & {
-    cors?: PipeCorsConfig
+    cors?: PipeCORSConfig
 }

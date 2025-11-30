@@ -147,6 +147,7 @@ describe('validation - basic types', () => {
         const parsed = strArray.validate(['string one', 'string two']);
         expect(parsed).toEqual(['string one', 'string two']);
     });
+    // TODO: array of objects
     /* object */
     it('Should return object JSOO schema', () => {
         const object = dt.Object({
