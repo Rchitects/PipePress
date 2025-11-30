@@ -19,31 +19,53 @@ npm install pipepress
 ## Benchmark
 
 TODO
+```bash
+npm run benchmark
+```
 
+┌─────────┬─────────────┬─────────┬─────────┬─────────────┬──────────┐
+│ (index) │ name        │ rps     │ latency │ throughput  │ memoryMB │
+├─────────┼─────────────┼─────────┼─────────┼─────────────┼──────────┤
+│ 0       │ 'express'   │ 1557.25 │ 2493.67 │ '0.43 MB/s' │ '44.80'  │
+│ 1       │ 'fastify'   │ 1714.25 │ 2482.22 │ '0.37 MB/s' │ '45.82'  │
+│ 2       │ 'nest'      │ 0       │ 0       │ '0.00 MB/s' │ '69.09'  │
+│ 3       │ 'pipepress' │ 3045    │ 32.33   │ '0.73 MB/s' │ '59.83'  │
+└─────────┴─────────────┴─────────┴─────────┴─────────────┴──────────┘
 ## Quick Example
-
 ```ts
-TODO
-import { PipePress, defineRouter } from "pipepress";
-
-const users = defineRouter()
-  .use(async (ctx) => {
-    console.log("User router middleware");
-    return true;
-  })
-  .get("/:id", async (ctx) => {
-    ctx.res.end("User ID: " + ctx.req.params.id);
-  });
+import { PipePress } from "pipepress";
 
 const app = new PipePress();
 
-app.use(async () => true);
+/* global stages */
+app.use(logger);
 
-app.mount("/users", users);
+/* router */
+const router = new Router();
+router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
+router.get<any, any, { id: string }>('/:id', async (ctx) => {
+    return { name: 'Johnny', id: ctx.params.id, created: new Date() };
+});
+router.get('/all', {
+    stages: [{
+        handler: async (ctx) => { console.log('Get all users private stage') }
+    }]
+}, async (ctx) => {
+    return {
+        users: [
+            { name: 'Johnny', id: '1', created: new Date() },
+            { name: 'Bob', id: '2', created: new Date() }
+        ]
+    };
+});
+app.mount('/user', router);
 
 app.build();
 
-app.listen(3000, () => console.log("PipePress running at http://localhost:3000"));
+app.listen(4000)
+    .then(() => {
+        console.log("PipePress running at http://localhost:3000")
+    });
 ```
 
 ## Error Handling
@@ -54,10 +76,9 @@ app.setErrorHandler((err, ctx) => {
   ctx.res.end(err.message || "Internal Server Error");
 });
 
-app.setNotFoundHandler((ctx) => {
-  ctx.res.statusCode = 404;
-  ctx.res.end("Not Found");
-});
+
+/* custome not-found handler */
+app.setNotFoundHandler(...);
 ```
 
 ## Roadmap
