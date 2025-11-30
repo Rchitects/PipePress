@@ -5,22 +5,61 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./datatypes": {
+      "import": "./dist/core/datatypes.mjs",
+      "require": "./dist/core/datatypes.js"
+    }
+  },
   "scripts": {
-    "build": "tsup src/index.ts --dts --format esm,cjs --out-dir dist",
-    "dev": "tsup src/index.ts --watch",
-    "example:compile": "tsc example/index.ts --outDir dist/example",
-    "example:run": "node dist/example/index.js"
+    "build": "tsup",
+    "build:benchmark": "tsc --project tsconfig.benchmark.json",
+    "benchmark": "npm run build && npm run build:benchmark && node dist-benchmark/benchmark.js",
+    "dev:example": "npm run build && npm run run:example",
+    "run:example": "ts-node example/index.ts",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "@types/node": "^24.8.1",
+    "@fastify/cors": "^11.1.0",
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "@types/autocannon": "^7.12.7",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/json-schema": "^7.0.15",
+    "@types/node": "^24.9.1",
+    "@types/pidusage": "^2.0.5",
+    "@vitest/coverage-v8": "^4.0.5",
+    "autocannon": "^8.0.0",
+    "body-parser": "^2.2.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "fastify": "^5.6.2",
+    "joi": "^18.0.2",
+    "pidusage": "^4.0.1",
+    "reflect-metadata": "^0.2.2",
+    "tsconfig-paths": "^4.2.0",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.5"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "fast-json-stringify": "^6.1.1",
+    "find-my-way": "^9.3.0",
+    "ts-node": "^10.9.2"
+  }
 }
