@@ -15,9 +15,12 @@ const frameworks = [
 /*** benchmark runner ***/
 async function runBenchmark(framework: typeof frameworks[0]) {
     return new Promise((resolve) => {
-        const proc = spawn(framework.cmd, framework.args, { stdio: "inherit" });
+        const proc = spawn(framework.cmd, framework.args, { stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
 
-        setTimeout(async () => {
+        /* wait for message from */
+        proc.on('message', async (msg) => {
+            /* start benchmark */
+            console.log(msg);
             console.log(`\n🔫 Benchmarking ${framework.name}...`);
 
             const result = await autocannon({
@@ -42,7 +45,7 @@ async function runBenchmark(framework: typeof frameworks[0]) {
                 throughput: throughputMB,
                 memoryMB: ((stats as any).memory / 1024 / 1024).toFixed(2),
             });
-        }, 2000);
+        });
     });
 }
 

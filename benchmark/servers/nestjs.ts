@@ -25,6 +25,6 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe());
   await app.listen(3003);
-  console.log("NestJS listening on 3003");
+  process.send!("NestJS listening on 3003");
 }
 bootstrap();

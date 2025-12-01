@@ -15,4 +15,6 @@ app.post("/echo", (req, res) => {
   res.json({ message: `Hello ${value.name}` });
 });
 
-app.listen(3001, () => console.log("Express listening on 3001"));
+app.listen(3001, () => {
+  process.send!('Express running on port 3001');
+});

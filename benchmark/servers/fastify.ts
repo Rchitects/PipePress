@@ -18,4 +18,4 @@ app.post<{ Body: { name: string } }>("/echo", { schema }, async (req, reply) => 
     return { message: `Hello ${req.body.name}` };
 });
 
-app.listen({ port: 3002 }, () => console.log("Fastify listening on 3002"));
+app.listen({ port: 3002 }, () => process.send!("Fastify listening on 3002"));

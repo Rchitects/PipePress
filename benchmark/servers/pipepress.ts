@@ -13,5 +13,5 @@ app.post("/echo", { body: schemaReq, response: schemaResp }, async (ctx) => {
 app.build();
 app.listen(3004)
     .then(() => {
-        console.log("PipePress listening on 3004");
+        process.send!("PipePress listening on 3004");
     });
