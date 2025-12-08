@@ -1,5 +1,5 @@
 /*** imports (compiled) ***/
-import { PipePress, PipeStage, Router } from "pipepress";
+import { basicHTTPLogger, PipePress, PipeStage, Router } from "pipepress";
 import dt from "pipepress/datatypes";
 
 /*** pre-defined stages ***/
@@ -26,7 +26,8 @@ const app = new PipePress({
 });
 
 /* global stages */
-app.use(logger);
+// app.use(logger);
+app.use(basicHTTPLogger());
 
 /* not found handler */
 // app.setNotFoundHandler<{ message: string }>(async (ctx) => {
