@@ -1,12 +1,13 @@
 /*** imports ***/
+import fastJSON from "fast-json-stringify";
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
 import { voidStageHandler } from "../stages/voidStageHandler";
+import { DataType } from "./datatypes";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCORSConfig, PipePressConfig, PipeResponse, PipeStage, PipeStageHandler, Route } from "./types";
-import { DataType } from "./datatypes";
-import fastJSON from "fast-json-stringify";
+import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./types";
+import inject from "light-my-request";
 
 /*** definitions ***/
 const DEFAULT_CONFIG: PipePressConfig = {
@@ -169,6 +170,37 @@ export class PipePress extends Router {
     prittyPrintRoutes(): string {
         if (!this._build) throw new Error('build() was not called');
         return this._reqRouter.prettyPrint();
+    }
+
+    async inject(options: PipePressInjectOptions): Promise<PipePressInjectResponse> {
+        const res = await inject(
+            this._handleRequest.bind(this),
+            {
+                method: options.method,
+                url: options.url,
+                headers: options.headers,
+                payload: options.body
+            }
+        );
+
+        /* create response data */
+        const buf = Buffer.from(res.rawPayload || "");
+        const str = buf.toString();
+
+        return {
+            statusCode: res.statusCode,
+            headers: res.headers as Record<string, string>,
+            body: str,
+            json: <T = any>() => {
+                try {
+                    return JSON.parse(str) as T;
+                } catch {
+                    throw new Error("Response is not valid JSON");
+                }
+            },
+            text: () => str,
+            raw: () => buf,
+        };
     }
 
     /*** private functions ***/

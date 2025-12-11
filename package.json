@@ -60,6 +60,7 @@
   "dependencies": {
     "fast-json-stringify": "^6.1.1",
     "find-my-way": "^9.3.0",
+    "light-my-request": "^6.6.0",
     "ts-node": "^10.9.2"
   }
 }

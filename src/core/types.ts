@@ -80,3 +80,17 @@ export type PipeCORSConfig = {
 export type PipePressConfig = PipeRouterConfig & {
     cors?: PipeCORSConfig
 }
+export type PipePressInjectOptions = {
+    method: HTTPMethod;
+    url: string;
+    headers?: Record<string, string>;
+    body?: any;
+}
+export type PipePressInjectResponse = {
+    statusCode: number;
+    headers: Record<string, string>;
+    body: string;
+    json: <T = any>() => T;
+    text: () => string;
+    raw: () => Buffer;
+}
