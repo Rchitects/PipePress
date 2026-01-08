@@ -1,6 +1,6 @@
 {
-  "name": "pipepress",
-  "version": "1.0.0",
+  "name": "@rchitects/pipepress",
+  "version": "0.1.0-beta.0",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.js",
