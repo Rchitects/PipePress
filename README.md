@@ -79,6 +79,11 @@ app.setErrorHandler((err, ctx) => {
 app.setNotFoundHandler(...);
 ```
 
+## Pre-Defined stages
+TODO
+### Basic Logger
+### Rate limiter
+
 ## Roadmap
 - Express-compatible handler and middleware support
 - Type-safe context injection

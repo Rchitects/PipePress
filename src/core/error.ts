@@ -21,6 +21,11 @@ type ContentTooLargePipeErrPayload = PipeErrBasePayload & {
     allowed: number;
     sent: number;
 };
+type TooManyReqeuestsPipeErrPayload = PipeErrBasePayload & {
+    retryAfterMs: number;
+    reqeustLimit: number;
+    requestCount: number;
+};
 
 /*** schemas for errors ***/
 const DefaultPipeErrSchema = dt.Object({
@@ -39,6 +44,12 @@ const ContentTooLargePipeErrSchema = dt.Object({
     message: dt.String(),
     allowed: dt.Number(),
     sent: dt.Number()
+});
+const TooManyReqeuestsPipeErrSchema = dt.Object({
+    message: dt.String(),
+    retryAfterMs: dt.Number(),
+    reqeustLimit: dt.Number(),
+    requestCount: dt.Number()
 });
 
 /*** main class ***/
@@ -107,5 +118,10 @@ export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {
 export class ContentTooLargePipeErr extends PipeError<ContentTooLargePipeErrPayload> {
     constructor(public allowed: number, public sent: number) {
         super('ContentTooLargePipeErr', `Payload is too large`, HTTPStatus.CONTENT_TOO_LARGE, ContentTooLargePipeErrSchema);
+    }
+}
+export class TooManyRequestsPipeErr extends PipeError<TooManyReqeuestsPipeErrPayload> {
+    constructor(public retryAfterMs: number, public reqeustLimit: number, public requestCount: number) {
+        super('TooManyRequestsPipeErr', `Too many requests`, HTTPStatus.TOO_MANY_REQUESTS, TooManyReqeuestsPipeErrSchema);
     }
 }

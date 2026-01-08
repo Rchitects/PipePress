@@ -1,21 +1,8 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, PipePress, PipeStage, Router } from "pipepress";
+import { basicHTTPLogger, PipePress, PipeStage, rateLimiter, Router } from "pipepress";
 import dt from "pipepress/datatypes";
 
 /*** pre-defined stages ***/
-const logger: PipeStage<void> = {
-    handler: async (ctx) => {
-        ctx.res.on('finish', () => {
-            let msg = `[${ctx.res.statusCode}] ${ctx.req.method} ${ctx.req.url} `;
-            if (ctx.query) {
-                msg += Object.entries(ctx.query).map(([key, value]) => {
-                    return `${key} = ${value}`;
-                }).join(',');
-            }
-            console.log(msg);
-        })
-    }
-}
 /*** router ***/
 /*** pipepress ***/
 const app = new PipePress({
@@ -26,8 +13,8 @@ const app = new PipePress({
 });
 
 /* global stages */
-// app.use(logger);
 app.use(basicHTTPLogger());
+app.use(rateLimiter());
 
 /* not found handler */
 // app.setNotFoundHandler<{ message: string }>(async (ctx) => {

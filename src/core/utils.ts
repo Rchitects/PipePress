@@ -10,3 +10,6 @@ export const fastUUID = (time: number = Date.now()) => {
     const randHex = Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, "0");
     return tsHex + randHex; /* always 18 characters long -- 12 from timestamp, 6 from random */
 };
+export const sleep = (ms: number): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
