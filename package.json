@@ -26,6 +26,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rchitects/PipePress.git"
+  },
   "type": "commonjs",
   "devDependencies": {
     "@fastify/cors": "^11.1.0",
