@@ -106,7 +106,8 @@ export class PipePress extends Router {
                         this._sendResponse(res, {
                             status: HTTPStatus.OK,
                             body: mainRes,
-                            serializer: route.serializer
+                            serializer: route.serializer,
+                            contentType: route.contentType
                             // headers: ?? TODO
                         });
                     }
@@ -244,13 +245,16 @@ export class PipePress extends Router {
             }
         }
 
+        /* check for content type */
+        const contentType: HTTPContentType = result.contentType || 'application/json';
+
         /* create data */
-        let body: string;
+        let body: any;  // string or buffer
         if (result.status === HTTPStatus.NO_CONTENT) {
             return res.end();
         }
-        else if (typeof result.body === 'string') {
-            res.setHeader('Content-Type', 'text/plain' as HTTPContentType);
+        else if (contentType !== 'application/json') {
+            res.setHeader('Content-Type', contentType);
             body = result.body;
         }
         else {

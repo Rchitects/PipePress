@@ -56,7 +56,8 @@ export class Router {
                 handler: handler!,
                 stages: optionsOrHandler.stages,
                 body: optionsOrHandler.body,
-                serializer: serializer
+                serializer: serializer,
+                contentType: optionsOrHandler.contentType
             });
         }
     }
@@ -85,7 +86,8 @@ export class Router {
                 handler: route.handler,
                 stages: routeStages,
                 body: route.body,
-                serializer: route.serializer
+                serializer: route.serializer,
+                contentType: route.contentType
             } as Route;
         });
         /* get sub routes */

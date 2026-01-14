@@ -27,6 +27,7 @@ export type PipeResponse<Body = any> = {
     body?: Body;
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;
+    contentType?: HTTPContentType;
 }
 export type PipeStageHandler<Body> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void; // TODO: add missing types for ctx
 export type PipeRouteHandler<Res = any, B = undefined, P = undefined, Q = undefined> = (ctx: PipeContext<B, P, Q>) => MaybePromise<Res>;
@@ -41,11 +42,13 @@ export type Route = {
     serializer: stringyfy<any>;
     stages?: PipeStage<any>[];
     body?: DataType<any, boolean>;
+    contentType?: HTTPContentType;
 }
 export type RouteOptions<Res, B extends DataType<any, boolean> | undefined> = {
     stages?: PipeStage<any>[];
     body?: B;
-    response?: DataType<Res, boolean>
+    response?: DataType<Res, boolean>;
+    contentType?: HTTPContentType;
 }
 
 /*** reponse types ***/
@@ -68,7 +71,10 @@ export type HTTPStatus = typeof HTTPStatus[keyof typeof HTTPStatus];
 export type HTTPContentType =
     | 'application/json'
     | 'text/plain'
-    | 'application/x-www-form-urlencoded';
+    | 'application/x-www-form-urlencoded'
+    | 'image/gif'
+    | 'image/jpeg'
+    | 'image/png';
 export type stringyfy<T> = (data: T) => string;
 
 /*** pipepress types ***/

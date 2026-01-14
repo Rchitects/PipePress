@@ -1,6 +1,6 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, PipePress, PipeStage, rateLimiter, Router } from "pipepress";
-import dt from "pipepress/datatypes";
+import { basicHTTPLogger, PipePress, PipeStage, rateLimiter, Router } from "../dist";
+import dt from "../dist/core/datatypes";
 
 /*** pre-defined stages ***/
 /*** router ***/
@@ -73,6 +73,14 @@ router.get('/all', {
     };
 });
 app.mount('/user', router);
+
+/* custome conten type */
+app.get('/image', {contentType: 'image/gif'}, async (ctx) => {
+    const imgBuffer = Buffer.from([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+    ]);
+    return imgBuffer;
+});
 
 /* create routes */
 app.build();
