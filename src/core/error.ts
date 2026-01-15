@@ -28,6 +28,9 @@ type TooManyReqeuestsPipeErrPayload = PipeErrBasePayload & {
 };
 
 /*** schemas for errors ***/
+const BasePipeErrSchema = dt.Object({
+    message: dt.String()
+});
 const DefaultPipeErrSchema = dt.Object({
     message: dt.String(),
     errName: dt.String()
@@ -123,5 +126,15 @@ export class ContentTooLargePipeErr extends PipeError<ContentTooLargePipeErrPayl
 export class TooManyRequestsPipeErr extends PipeError<TooManyReqeuestsPipeErrPayload> {
     constructor(public retryAfterMs: number, public reqeustLimit: number, public requestCount: number) {
         super('TooManyRequestsPipeErr', `Too many requests`, HTTPStatus.TOO_MANY_REQUESTS, TooManyReqeuestsPipeErrSchema);
+    }
+}
+export class UnauthorizedPipeErr extends PipeError<PipeErrBasePayload> {
+    constructor(message: string) {
+        super('UnauthorizedPipeErr', message, HTTPStatus.UNAUTHORIZED, BasePipeErrSchema);
+    }
+}
+export class ForbiddenPipeErr extends PipeError<PipeErrBasePayload> {
+    constructor(message: string) {
+        super('ForbiddenPipeErr', message, HTTPStatus.FORBIDDEN, BasePipeErrSchema);
     }
 }

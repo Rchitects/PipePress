@@ -35,7 +35,7 @@ function addToLogBuffer(message: string) {
     }
 }
 /*** pipe-stage ***/
-export const basicHTTPLogger = (): PipeStage<void> => {
+export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<void> => {
     return {
         handler: async (ctx) => {
             const { method, url } = ctx.req;
@@ -43,7 +43,12 @@ export const basicHTTPLogger = (): PipeStage<void> => {
             const reqID = fastUUID(startTime);
             /* create start of request log message */
             const startMsg = `[${reqID}] ${method} ${url} by ${ctx.req.socket.remoteAddress}`;
-            addToLogBuffer(startMsg);
+            if (printer) {
+                printer(startMsg);
+            }
+            else {
+                addToLogBuffer(startMsg);
+            }
             /* on response finish, log the completion */
             ctx.res.on('finish', () => {
                 const duration = Date.now() - startTime;
@@ -58,8 +63,13 @@ export const basicHTTPLogger = (): PipeStage<void> => {
                     endMsg += ` ${red(`${ctx.res.statusCode}`)}`;
                 }
                 endMsg += ` ${yellow(`+${duration}ms`)} `;
-                
-                addToLogBuffer(endMsg);
+
+                if (printer) {
+                    printer(endMsg);
+                }
+                else {
+                    addToLogBuffer(endMsg);
+                }
             });
         }
     };

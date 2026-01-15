@@ -75,12 +75,18 @@ router.get('/all', {
 app.mount('/user', router);
 
 /* custome conten type */
-app.get('/image', {contentType: 'image/gif'}, async (ctx) => {
+app.get('/image', { contentType: 'image/gif' }, async (ctx) => {
     const imgBuffer = Buffer.from([
         0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
     ]);
     return imgBuffer;
 });
+
+/* crazy logger */
+const loggi = (msg: string) => {
+    console.log(`[CRAZY] ${msg}`);
+};
+app.get('/crazy-log', { stages: [basicHTTPLogger(loggi)] }, async (ctx) => { });
 
 /* create routes */
 app.build();
