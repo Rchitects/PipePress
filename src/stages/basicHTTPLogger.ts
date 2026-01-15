@@ -1,6 +1,6 @@
 /*** imports ***/
 import { PipeStage } from "../core/types";
-import { fastUUID } from "../core/utils";
+import { fastUUID, getIP } from "../core/utils";
 
 /*** types ***/
 type LogEntry = {
@@ -42,7 +42,7 @@ export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<
             const startTime = Date.now();
             const reqID = fastUUID(startTime);
             /* create start of request log message */
-            const startMsg = `[${reqID}] ${method} ${url} by ${ctx.req.socket.remoteAddress}`;
+            const startMsg = `[${reqID}] ${method} ${url} by ${getIP(ctx.req)}`;
             if (printer) {
                 printer(startMsg);
             }

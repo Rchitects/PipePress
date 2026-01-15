@@ -1,8 +1,7 @@
 /*** imports ***/
-import { IncomingMessage } from "http"
-import { PipeStage } from "../core/types"
-import { sleep } from "../core/utils";
 import { TooManyRequestsPipeErr } from "../core/error";
+import { PipeStage } from "../core/types";
+import { getIP, sleep } from "../core/utils";
 
 /*** types ***/
 type RateLimitRecord = {
@@ -21,18 +20,6 @@ const RATE_LIMIT_CONFIG_DEFAULT: Required<RateLimitConfig> = {
     maxRequests: 10,
     windowMs: 10000,
     delayMs: 0
-}
-
-/*** functions ***/
-function getIP(req: IncomingMessage): string {
-    const forwardedFor = req.headers['x-forwarded-for'];
-
-    if (forwardedFor && typeof forwardedFor === 'string') {
-        const ips = forwardedFor.split(',');
-        return ips[0].trim();
-    }
-
-    return req.socket.remoteAddress || 'unknown';
 }
 
 /*** stage-handler ***/

@@ -1,4 +1,5 @@
 /*** imports ***/
+import { IncomingMessage } from "http";
 import { HTTPContentType } from "./types";
 
 /*** functions ***/
@@ -12,4 +13,14 @@ export const fastUUID = (time: number = Date.now()) => {
 };
 export const sleep = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+export const getIP = (req: IncomingMessage): string => {
+    const forwardedFor = req.headers['x-forwarded-for'];
+
+    if (forwardedFor && typeof forwardedFor === 'string') {
+        const ips = forwardedFor.split(',');
+        return ips[0].trim();
+    }
+
+    return req.socket.remoteAddress || 'unknown';
 }
