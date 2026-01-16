@@ -41,6 +41,7 @@ export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<
             const { method, url } = ctx.req;
             const startTime = Date.now();
             const reqID = fastUUID(startTime);
+            let finished = false;
             /* create start of request log message */
             const startMsg = `[${reqID}] ${method} ${url} by ${getIP(ctx.req)}`;
             if (printer) {
@@ -51,6 +52,7 @@ export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<
             }
             /* on response finish, log the completion */
             ctx.res.on('finish', () => {
+                finished = true;
                 const duration = Date.now() - startTime;
                 let endMsg = `[${reqID}]`;
                 if (ctx.res.statusCode < 400) {
@@ -69,6 +71,30 @@ export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<
                 }
                 else {
                     addToLogBuffer(endMsg);
+                }
+            });
+            /* on close event check if finished */
+            ctx.res.on('close', () => {
+                if (!finished) {
+                    const duration = Date.now() - startTime;
+                    const closeMsg = `[${reqID}] ${red('Connection closed')} ${yellow(`+${duration}ms`)}`;
+                    if (printer) {
+                        printer(closeMsg);
+                    }
+                    else {
+                        addToLogBuffer(closeMsg);
+                    }
+                }
+            });
+            /* on error event log the error */
+            ctx.res.on('error', (err) => {
+                const duration = Date.now() - startTime;
+                const errorMsg = `[${reqID}] ${red('Error:')} ${err.message} ${yellow(`+${duration}ms`)}`;
+                if (printer) {
+                    printer(errorMsg);
+                }
+                else {
+                    addToLogBuffer(errorMsg);
                 }
             });
         }

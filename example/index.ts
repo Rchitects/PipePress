@@ -88,6 +88,12 @@ const loggi = (msg: string) => {
 };
 app.get('/crazy-log', { stages: [basicHTTPLogger(loggi)] }, async (ctx) => { });
 
+/* long route */
+app.get('/slow', async (ctx) => {
+    await new Promise((res) => setTimeout(res, 10000));
+    return { status: 'OK', message: 'That was slow!' };
+});
+
 /* create routes */
 app.build();
 
