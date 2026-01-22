@@ -6,7 +6,7 @@ import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, Params, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./types";
 import inject from "light-my-request";
 
 /*** definitions ***/
@@ -216,7 +216,7 @@ export class PipePress extends Router {
             this._handleNotFound(req, res);
         }
     }
-    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: Params): PipeContext<any> {
+    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType): PipeContext<any, any, any> {
         /* extract query paramters */
         const reqURL = new URL(req.url || '', `http://${req.headers.host}`);   // TODO: base-url needed?
         const queryParams: Record<string, string> = {};
@@ -229,7 +229,8 @@ export class PipePress extends Router {
             res,
             params,
             query: queryParams,
-            body: undefined
+            body: undefined,
+            files: {}
         };
         return ctx;
     }
@@ -264,7 +265,7 @@ export class PipePress extends Router {
         }
         res.end(body);
     }
-    private _handleError(e: any, ctx: PipeContext<any>) {
+    private _handleError(e: any, ctx: PipeContext<any, any, any>) {
         // TODO: add custome error handler?
         try {
             if (e instanceof PipeError) {
@@ -326,7 +327,7 @@ export class PipePress extends Router {
             this._handleError(e, ctx);
         }
     }
-    private _corsStageHandler(ctx: PipeContext<any>) {
+    private _corsStageHandler(ctx: PipeContext<any, any, any>) {
         /* ORIGIN */
         ctx.res.setHeader('Access-Control-Allow-Origin', '*');  // TODO: make configurable
         /* METHODS */
