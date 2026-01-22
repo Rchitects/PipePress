@@ -1,12 +1,12 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, PipePress, PipeStage, rateLimiter, Router } from "../dist";
-import dt from "../dist/core/datatypes";
+import { basicHTTPLogger, PipePress, rateLimiter, Router } from "../dist";
+import dt, { ParsedType } from "../dist/core/datatypes";
 
 /*** pre-defined stages ***/
 /*** router ***/
 /*** pipepress ***/
 const app = new PipePress({
-    maxBodyLength: 100,
+    // maxBodyLength: 100,
     cors: {
         preflight: 'auto'
     }
@@ -34,13 +34,12 @@ const resp1 = dt.Object({
     age: dt.Number(),
     birth: dt.Date().isOptional()
 });
-app.get('/birth', { response: resp1 }, async (ctx) => {
+app.get<any, any, ParsedType<typeof resp1>>('/birth', { response: resp1 }, async (ctx) => {
     return {
         age: 123,
-        name: 'Peter',
+        name: 'John Doe'
     }
 });
-
 
 const dataBody = dt.Object({
     name: dt.String(),
@@ -56,7 +55,7 @@ app.post('/ping', async (ctx) => {
 /* router */
 const router = new Router();
 router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get<any, any, { id: string }>('/:id', async (ctx) => {
+router.get<{ id: string }>('/:id', async (ctx) => {
     console.log('Get user with id ', ctx.params.id);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });
@@ -92,6 +91,25 @@ app.get('/crazy-log', { stages: [basicHTTPLogger(loggi)] }, async (ctx) => { });
 app.get('/slow', async (ctx) => {
     await new Promise((res) => setTimeout(res, 10000));
     return { status: 'OK', message: 'That was slow!' };
+});
+
+/* file upload */
+app.post('/file-upload', { files: { uno: true }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
+    if (!ctx.files.uno) {
+        console.log('No files uploaded');
+    }
+    else {
+        console.log('Uno files Len', ctx.files.uno.length);
+        console.log('File content');
+        console.log(ctx.files.uno[0].data.toString('utf-8'));
+    }
+    if(ctx.body) {
+        console.log('Body');
+        console.log(ctx.body);
+    }
+    else{
+        console.log('No Body');
+    }
 });
 
 /* create routes */
