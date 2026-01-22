@@ -6,7 +6,7 @@ import dt, { ParsedType } from "../dist/core/datatypes";
 /*** router ***/
 /*** pipepress ***/
 const app = new PipePress({
-    maxBodyLength: 100,
+    // maxBodyLength: 100,
     cors: {
         preflight: 'auto'
     }
@@ -93,8 +93,24 @@ app.get('/slow', async (ctx) => {
     return { status: 'OK', message: 'That was slow!' };
 });
 
-/* fiel upload */
-app.get('/file-upload', { files: { uno: true } }, async (ctx) => {});
+/* file upload */
+app.post('/file-upload', { files: { uno: true }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
+    if (!ctx.files.uno) {
+        console.log('No files uploaded');
+    }
+    else {
+        console.log('Uno files Len', ctx.files.uno.length);
+        console.log('File content');
+        console.log(ctx.files.uno[0].data.toString('utf-8'));
+    }
+    if(ctx.body) {
+        console.log('Body');
+        console.log(ctx.body);
+    }
+    else{
+        console.log('No Body');
+    }
+});
 
 /* create routes */
 app.build();

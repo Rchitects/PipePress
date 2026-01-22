@@ -22,7 +22,7 @@ export class Router {
     }
 
     /*** private functions ***/
-    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions<any, any>, handler: PipeRouteHandler<any, any, any, any>): void {
+    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions<any, any, any>, handler: PipeRouteHandler<any, any, any, any>): void {
         /* check for serialzier */
         let serializer: stringyfy<any> = JSON.stringify;
         if (optionsOrHandler.response) {
@@ -37,7 +37,8 @@ export class Router {
             stages: optionsOrHandler.stages,
             body: optionsOrHandler.body,
             serializer: serializer,
-            contentType: optionsOrHandler.contentType
+            contentType: optionsOrHandler.contentType,
+            files: optionsOrHandler.files
         });
     }
     /*** public functions ***/
@@ -74,7 +75,8 @@ export class Router {
                 stages: routeStages,
                 body: route.body,
                 serializer: route.serializer,
-                contentType: route.contentType
+                contentType: route.contentType,
+                files: route.files
             } as Route;
         });
         /* get sub routes */

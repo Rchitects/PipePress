@@ -44,6 +44,7 @@ export type Route = {
     stages?: PipeStage<any>[];
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
+    files?: Record<string, true>;
 }
 export type RouteOptions<
     Res = void,
@@ -85,6 +86,7 @@ export type HTTPContentType =
     | 'application/json'
     | 'text/plain'
     | 'application/x-www-form-urlencoded'
+    | 'multipart/form-data'
     | 'image/gif'
     | 'image/jpeg'
     | 'image/png';
