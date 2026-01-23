@@ -1,7 +1,11 @@
 /*** imports ***/
+import path from "path";
 import { BadRequestPipeErr, ContentTooLargePipeErr, ValidationPipeErr } from "../core/error";
 import { FileUpload, HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/types";
-import { isContentType } from "../core/utils";
+import { fastUUID, isContentType } from "../core/utils";
+import Busboy from "busboy";
+import os from "node:os";
+import { createWriteStream } from "node:fs";
 
 /*** types ***/
 type BodyParserOptions = {
@@ -15,93 +19,74 @@ const DEFAULT_OPTS: Required<BodyParserOptions> = {
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
 /*** functions ***/
-function getMultipartBoundary(contentType: string): string {
-    const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
-    if (!match) throw new Error("Multipart boundary missing");
-    return `--${match[1] || match[2]}`;
-}
-function bufferSplit(buf: Buffer, sep: Buffer): Buffer[] {
-    const parts: Buffer[] = [];
-    let start = 0;
-    let index: number;
+async function parseMultiPartBody(ctx: PipeContext<any, any, any>, route: Route) {
+    return new Promise<{ fields: Record<string, string>, files: Record<string, FileUpload[]> }>((resolve, reject) => {
+        /* create busboy instance */
+        const busbuy = Busboy({ headers: ctx.req.headers });
 
-    while ((index = buf.indexOf(sep, start)) !== -1) {
-        parts.push(buf.subarray(start, index));
-        start = index + sep.length;
-    }
+        /* storage for files & fields */
+        const fields: Record<string, string> = {};
+        const files: Record<string, FileUpload[]> = {};
 
-    parts.push(buf.subarray(start));
-    return parts;
-}
-function parseMultipartHeaders(headerText: string): Record<string, string> {
-    const headers: Record<string, string> = {};
-    const lines = headerText.split("\r\n");
+        /* setup event handler */
+        busbuy.on("file", (name, file, info) => {
+            /* check if file is allowed */
+            if (route.files && !route.files[name]) {
+                /* skip file */
+                file.resume();
+                return;
+            }
 
-    for (const line of lines) {
-        const idx = line.indexOf(":");
-        if (idx === -1) continue;
-        headers[line.slice(0, idx).trim().toLowerCase()] = line.slice(idx + 1).trim();
-    }
+            /* valid file, store it */
+            const { filename, encoding, mimeType } = info;
+            const filePath = path.join(os.tmpdir(), `${fastUUID()}_${filename}`);
+            const writeStream = createWriteStream(filePath);
 
-    return headers;
-}
-function parseContentDisposition(value?: string) {
-    if (!value) return null;
+            let fileSize = 0;
 
-    const parts = value.split(";").map(v => v.trim());
-    const out: any = {};
+            /* create result */
+            const fileInfo: FileUpload = {
+                filename: filename,
+                encoding: encoding,
+                size: 0,
+                mimeType: mimeType,
+                path: filePath
+            };
 
-    for (const part of parts) {
-        if (part === "form-data") continue;
-        const eqIdx = part.indexOf("=");
-        if (eqIdx === -1) continue;
-
-        const key = part.slice(0, eqIdx);
-        const rawVal = part.slice(eqIdx + 1);
-        out[key] = rawVal.replace(/^"|"$/g, "");
-    }
-
-    return out;
-}
-
-function parseMultiPartBody(raw: Buffer, contentType: string) {
-    const boundaryStr = getMultipartBoundary(contentType);
-    const boundaryBuf = Buffer.from(boundaryStr);
-    const parts = bufferSplit(raw, boundaryBuf);
-
-    const fields: Record<string, string> = {};
-    const files: Record<string, any[]> = {};
-
-    for (const part of parts) {
-        // check for empty parts or end-boundary (char(45) == '-')
-        if (part.length < 4 || part[0] === 45 && part[1] === 45) continue;
-
-        const headerEnd = part.indexOf("\r\n\r\n");
-        if (headerEnd === -1) continue;
-
-        const headerBuf = part.subarray(0, headerEnd).toString("utf8");
-        // remove the closing \r\n at the end and infront of next boundary
-        const body = part.subarray(headerEnd + 4, part.length - 2);
-
-        const headers = parseMultipartHeaders(headerBuf);
-        const disp = parseContentDisposition(headers["content-disposition"]);
-
-        if (!disp || !disp.name) continue;
-
-        if (disp.filename) {
-            if (!files[disp.name]) files[disp.name] = [];
-            files[disp.name].push({
-                field: disp.name,
-                filename: disp.filename,
-                contentType: headers["content-type"],
-                data: body
+            /* setup handler */
+            file.on("data", (chunk: Buffer) => {
+                fileSize += chunk.length;
             });
-        } else {
-            fields[disp.name] = body.toString("utf8");
-        }
-    }
 
-    return { fields, files };
+            file.on("end", () => {
+                fileInfo.size = fileSize;
+            });
+
+            file.pipe(writeStream);
+
+            /* save to result */
+            if (!files[name]) files[name] = [];
+            files[name].push(fileInfo);
+        });
+
+        busbuy.on("field", (name, value) => {
+            fields[name] = value;
+        });
+
+        busbuy.on("error", (err) => {
+            reject(err);
+        });
+
+        busbuy.on("finish", () => {
+            resolve({
+                fields,
+                files
+            });
+        });
+
+        /* start parsing */
+        ctx.req.pipe(busbuy);
+    });
 }
 
 /*** body-parser stage ***/
@@ -129,58 +114,71 @@ export const parseAndValidateBodyStage = (route: Route, options: BodyParserOptio
             /* if body is already present, stop */
             if (ctx.body !== undefined) return;
 
-            /* get data from stream */
-            const chunks: Buffer[] = [];
-            let size = 0;
-            for await (const chunk of ctx.req as AsyncIterable<Buffer>) {
-                size += chunk.length;
-                chunks.push(chunk);
-            }
-            if (!size) {
-                ctx.body = undefined;
-                return;
-            }
-
-            /* parse data */
-            const rawData = Buffer.concat(chunks);
+            /* check what kind of content we have */
             const contentType = ctx.req.headers['content-type'] ?? '';
-            let validate = true;
-            try {
-                if (isContentType(contentType, 'application/json')) {
-                    ctx.body = JSON.parse(rawData.toString('utf-8'));
-                }
-                else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
-                    ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
-                }
-                else if (isContentType(contentType, 'multipart/form-data')) {
-                    const { fields, files } = parseMultiPartBody(rawData, contentType);
-                    ctx.files = files;
+            let validateBody = true;
 
-                    /* add body only if body parser is provided */
+            if (isContentType(contentType, 'multipart/form-data')) {
+                /* parse data via busboy */
+                try {
+                    const { fields, files } = await parseMultiPartBody(ctx, route);
+                    ctx.files = files;  /* only files in ctx.files are considered */
+
                     if (route.body) {
                         ctx.body = fields;
                     }
                     else {
-                        validate = false
+                        /* make sure body is not validated & undefined */
+                        ctx.body = undefined;
+                        validateBody = false;
                     }
                 }
-                else {
-                    validate = false;
-                    ctx.body = rawData;
+                catch (e) {
+                    throw new BadRequestPipeErr('Could not parse multipart/form-data body.');
                 }
             }
-            catch (e) {
-                throw new BadRequestPipeErr('Could not parse request body.');
+            else {
+                /* normal content will be read buffered into RAM */
+                /* get data from stream */
+                const chunks: Buffer[] = [];
+                let size = 0;
+                for await (const chunk of ctx.req as AsyncIterable<Buffer>) {
+                    size += chunk.length;
+                    chunks.push(chunk);
+                }
+                if (!size) {
+                    ctx.body = undefined;
+                    return;
+                }
+
+                /* parse data */
+                const rawData = Buffer.concat(chunks);
+
+                try {
+                    if (isContentType(contentType, 'application/json')) {
+                        ctx.body = JSON.parse(rawData.toString('utf-8'));
+                    }
+                    else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
+                        ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
+                    }
+                    else {
+                        validateBody = false;
+                        ctx.body = rawData;
+                    }
+                }
+                catch (e) {
+                    throw new BadRequestPipeErr('Could not parse request body.');
+                }
             }
 
             /* validate & transform body */
-            if (route.body && validate) {
+            if (route.body && validateBody) {
                 try {
                     ctx.body = route.body.validate(ctx.body);
                 }
                 catch (e) {
                     if (e instanceof TypeError) {
-                        throw new ValidationPipeErr(e.message);
+                        throw new ValidationPipeErr(`Body validation failed: ${e.message}`);
                     }
                     throw new BadRequestPipeErr('Request body validation failed (unknown failure)');
                 }

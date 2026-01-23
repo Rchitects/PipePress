@@ -65,7 +65,7 @@ export class Router {
             const routeStages = [
                 ...inheritedStages,
                 ...this._stages,
-                parseAndValidateBodyStage(route, { limit: this._routerConfig.maxBodyLength }),
+                parseAndValidateBodyStage(route, { limit: this._routerConfig.maxBodyLength }),  // TODO: create one global body-parser stage (save memory)
                 ...(route.stages || [])
             ];
             return {

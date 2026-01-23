@@ -58,10 +58,11 @@ export type RouteOptions<
     files?: Files;
 }
 export type FileUpload = {
-    field: string;
     filename: string;
-    data: Buffer;
-    contentType?: string;
+    path: string;
+    encoding: string;
+    mimeType: string;
+    size: number;
 }
 export type InferFiles<T> = T extends Record<string, true> ? { [K in keyof T]: FileUpload[] } : Record<string, FileUpload[]>;
 
