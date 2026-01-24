@@ -95,13 +95,15 @@ app.get('/slow', async (ctx) => {
 
 /* file upload */
 app.post('/file-upload', { files: { uno: true }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
+    console.log(ctx.files);
+    console.log(ctx.body);
     if (!ctx.files.uno) {
         console.log('No files uploaded');
     }
     else {
         console.log('Uno files Len', ctx.files.uno.length);
         console.log('File content');
-        console.log(ctx.files.uno[0].data.toString('utf-8'));
+        console.log(ctx.files.uno[0].filename, ctx.files.uno[0].path);
     }
     if(ctx.body) {
         console.log('Body');

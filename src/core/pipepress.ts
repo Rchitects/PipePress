@@ -119,6 +119,24 @@ export class PipePress extends Router {
                 catch (e) {
                     this._handleError(e, ctx);
                 }
+                finally {
+                    if (ctx.files) {
+                        /* loop over files and delete temp files */
+                        for (const filedName in ctx.files) {
+                            const files = ctx.files[filedName];
+                            for (const file of files) {
+                                /* async delete the file */
+                                import('fs').then(fs => {
+                                    fs.unlink(file.path, (err) => {
+                                        if (err) {
+                                            console.error(`Could not delete temp file: ${file.path}`);  // TODO: how to handle this properly?
+                                        }
+                                    });
+                                });
+                            }
+                        }
+                    }
+                }
             });
         }
 
