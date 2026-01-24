@@ -1,0 +1,24 @@
+POST http://localhost:4000/file-upload
+Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266
+
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="name"
+
+Peter
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="uno"; filename="a.txt"
+Content-Type: text/plain
+
+Content of a.txt.
+
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="uno"; filename="a.html"
+Content-Type: text/html
+
+<!DOCTYPE html><title>Content of a.html.</title>
+
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="age"
+
+123
+-----------------------------9051914041544843365972754266--

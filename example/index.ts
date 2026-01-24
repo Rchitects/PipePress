@@ -94,22 +94,29 @@ app.get('/slow', async (ctx) => {
 });
 
 /* file upload */
-app.post('/file-upload', { files: { uno: true }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
+app.post('/file-upload', { files: { uno: { required: true }, duo: { required: false } }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
     if (!ctx.files.uno) {
         console.log('No files uploaded');
     }
     else {
         console.log('Uno files Len', ctx.files.uno.length);
         console.log('File content');
-        console.log(ctx.files.uno[0].data.toString('utf-8'));
+        for(const file of ctx.files.uno){
+            console.log(file.filename, file.path);
+        }
     }
-    if(ctx.body) {
+    if (ctx.body) {
         console.log('Body');
         console.log(ctx.body);
     }
-    else{
+    else {
         console.log('No Body');
     }
+    console.log('Sleep for 1 sek');
+    await new Promise((res, rej) => setTimeout(res, 1000));
+    return {
+        message: "Thanks Mr"
+    };
 });
 
 /* create routes */

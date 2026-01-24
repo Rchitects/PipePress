@@ -44,12 +44,12 @@ export type Route = {
     stages?: PipeStage<any>[];
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
-    files?: Record<string, true>;
+    files?: Record<string, FileOption>;
 }
 export type RouteOptions<
     Res = void,
     Body extends DataType<any, boolean> | undefined = undefined,
-    Files extends Record<string, true> | undefined = undefined
+    Files extends Record<string, FileOption> | undefined = undefined
 > = {
     stages?: PipeStage<any>[];
     body?: Body;
@@ -58,12 +58,22 @@ export type RouteOptions<
     files?: Files;
 }
 export type FileUpload = {
-    field: string;
     filename: string;
-    data: Buffer;
-    contentType?: string;
+    path: string;
+    encoding: string;
+    mimeType: string;
+    size: number;
 }
-export type InferFiles<T> = T extends Record<string, true> ? { [K in keyof T]: FileUpload[] } : Record<string, FileUpload[]>;
+export type FileOption = {
+    required: boolean;
+    maxSize?: number;   // TODO: use it
+    masAmount?: number;  // TODO: use it
+}
+// export type InferFiles<T> = T extends Record<string, true> ? { [K in keyof T]: FileUpload[] } : Record<string, FileUpload[]>;
+export type InferFiles<T> =
+    T extends undefined
+    ? undefined
+    : { [k in keyof T]: T[k] extends { required: true } ? FileUpload[] : FileUpload[] | undefined };
 
 /*** reponse types ***/
 export const HTTPStatus = {
