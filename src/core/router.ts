@@ -1,8 +1,7 @@
 /*** imports ***/
-import { parseAndValidateBodyStage } from "../stages/bodyParser";
-import type { FileOption, HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./types";
-import { DataType } from "./datatypes";
 import fastJSON from "fast-json-stringify";
+import { parseAndValidateBodyStage } from "../stages/bodyParser";
+import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./types";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -22,7 +21,7 @@ export class Router {
     }
 
     /*** private functions ***/
-    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions<any, any, any>, handler: PipeRouteHandler<any, any, any, any>): void {
+    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions, handler: PipeRouteHandler<any>): void {
         /* check for serialzier */
         let serializer: stringyfy<any> = JSON.stringify;
         if (optionsOrHandler.response) {
@@ -90,37 +89,37 @@ export class Router {
 
 
     /*** public HTTP functions ***/
-    get<Params = {}, Query = {}, Res = any>(path: string, handler: PipeRouteHandler<Params, Query, Res, {}>): void;
-    get<Params = {}, Query = {}, Res = any, Opts extends RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined> = RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined>>(path: string, options: Opts, handler: PipeRouteHandler<Params, Query, Res, Opts>): void;
-    get(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any, any, any>, handler?: PipeRouteHandler<any, any, any, any>) {
+    get<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
+    get<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
+    get(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('GET', path, opts, hand!);
     }
-    post<Params = {}, Query = {}, Res = any>(path: string, handler: PipeRouteHandler<Params, Query, Res, {}>): void;
-    post<Params = {}, Query = {}, Res = any, Opts extends RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined> = RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined>>(path: string, options: Opts, handler: PipeRouteHandler<Params, Query, Res, Opts>): void;
-    post(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any, any, any>, handler?: PipeRouteHandler<any, any, any, any>) {
+    post<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
+    post<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
+    post(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('POST', path, opts, hand!);
     }
-    put<Params = {}, Query = {}, Res = any>(path: string, handler: PipeRouteHandler<Params, Query, Res, {}>): void;
-    put<Params = {}, Query = {}, Res = any, Opts extends RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined> = RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined>>(path: string, options: Opts, handler: PipeRouteHandler<Params, Query, Res, Opts>): void;
-    put(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any, any, any>, handler?: PipeRouteHandler<any, any, any, any>) {
+    put<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
+    put<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
+    put(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PUT', path, opts, hand!);
     }
-    patch<Params = {}, Query = {}, Res = any>(path: string, handler: PipeRouteHandler<Params, Query, Res, {}>): void;
-    patch<Params = {}, Query = {}, Res = any, Opts extends RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined> = RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined>>(path: string, options: Opts, handler: PipeRouteHandler<Params, Query, Res, Opts>): void;
-    patch(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any, any, any>, handler?: PipeRouteHandler<any, any, any, any>) {
+    patch<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
+    patch<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
+    patch(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PATCH', path, opts, hand!);
     }
-    delete<Params = {}, Query = {}, Res = any>(path: string, handler: PipeRouteHandler<Params, Query, Res, {}>): void;
-    delete<Params = {}, Query = {}, Res = any, Opts extends RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined> = RouteOptions<Res, DataType<any, boolean> | undefined, Record<string, FileOption> | undefined>>(path: string, options: Opts, handler: PipeRouteHandler<Params, Query, Res, Opts>): void;
-    delete(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any, any, any>, handler?: PipeRouteHandler<any, any, any, any>) {
+    delete<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
+    delete<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
+    delete(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('DELETE', path, opts, hand!);

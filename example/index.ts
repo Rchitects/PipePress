@@ -34,10 +34,10 @@ const resp1 = dt.Object({
     age: dt.Number(),
     birth: dt.Date().isOptional()
 });
-app.get<any, any, ParsedType<typeof resp1>>('/birth', { response: resp1 }, async (ctx) => {
+app.get('/birth', { response: resp1 }, async (ctx) => {
     return {
         age: 123,
-        name: 'John Doe'
+        name: "John Doe"
     }
 });
 
@@ -45,7 +45,7 @@ const dataBody = dt.Object({
     name: dt.String(),
     age: dt.Number().isOptional()
 });
-app.post('/data', { body: dataBody }, async (ctx) => {
+app.post('/data/:id', { body: dataBody, params: dt.Object({ id: dt.String() }) }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
 app.post('/ping', async (ctx) => {
@@ -55,7 +55,7 @@ app.post('/ping', async (ctx) => {
 /* router */
 const router = new Router();
 router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get<{ id: string }>('/:id', async (ctx) => {
+router.get('/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx) => {
     console.log('Get user with id ', ctx.params.id);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });
@@ -101,7 +101,7 @@ app.post('/file-upload', { files: { uno: { required: true }, duo: { required: fa
     else {
         console.log('Uno files Len', ctx.files.uno.length);
         console.log('File content');
-        for(const file of ctx.files.uno){
+        for (const file of ctx.files.uno) {
             console.log(file.filename, file.path);
         }
     }

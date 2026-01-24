@@ -140,7 +140,7 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
         return this as unknown as ArrayType<T>;
     }
 }
-class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
+export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
     _schema: TSchema;
 
     constructor(schema: TSchema) {

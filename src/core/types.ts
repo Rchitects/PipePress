@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { ParsedType, DataType } from "./datatypes";
+import { ParsedType, DataType, ObjectType } from "./datatypes";
 
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
@@ -14,11 +14,11 @@ export type HTTPMethod =
     | "OPTIONS"
     | "HEAD";
 export type ParamsType = { [key: string]: string | undefined }
-export type PipeContext<Params, Query, Opts extends RouteOptions> = {
+export type PipeContext<Opts extends RouteOptions> = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: Params;
-    query: Query;
+    params: ParsedType<Opts["params"]>;
+    query: ParsedType<Opts["query"]>;
     body: ParsedType<Opts['body']>;
     files: InferFiles<Opts["files"]>;
     [key: string]: any; // TODO?
@@ -30,8 +30,8 @@ export type PipeResponse<Body = any> = {
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
 }
-export type PipeStageHandler<Body> = (ctx: PipeContext<any, any, any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Params, Query, Res, Opts extends RouteOptions<any, any, any>> = (ctx: PipeContext<Params, Query, Opts>) => MaybePromise<Res>; // TODO: match Res with Opts['response']
+export type PipeStageHandler<Body> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Opts extends RouteOptions> = (ctx: PipeContext<Opts>) => MaybePromise<InferResponseType<Opts>>;
 export type PipeStage<Res> = {
     handler: PipeStageHandler<Res>;
     serializer?: stringyfy<Res>;
@@ -39,24 +39,24 @@ export type PipeStage<Res> = {
 export type Route = {
     method: HTTPMethod;
     path: string;
-    handler: PipeRouteHandler<any, any, any, any>;
+    handler: PipeRouteHandler<any>;
     serializer: stringyfy<any>;
     stages?: PipeStage<any>[];
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
 }
-export type RouteOptions<
-    Res = void,
-    Body extends DataType<any, boolean> | undefined = undefined,
-    Files extends Record<string, FileOption> | undefined = undefined
-> = {
+export type RouteOptions = {
+    params?: ObjectType<any, false>;
+    query?: ObjectType<any, boolean>;
+    body?: DataType<any, boolean>;
+    files?: Record<string, FileOption>;
+    response?: DataType<any, boolean>;
     stages?: PipeStage<any>[];
-    body?: Body;
-    response?: DataType<Res, boolean>;
     contentType?: HTTPContentType;
-    files?: Files;
-}
+};
+
+
 export type FileUpload = {
     filename: string;
     path: string;
@@ -69,11 +69,14 @@ export type FileOption = {
     maxSize?: number;   // TODO: use it
     masAmount?: number;  // TODO: use it
 }
-// export type InferFiles<T> = T extends Record<string, true> ? { [K in keyof T]: FileUpload[] } : Record<string, FileUpload[]>;
 export type InferFiles<T> =
     T extends undefined
     ? undefined
     : { [k in keyof T]: T[k] extends { required: true } ? FileUpload[] : FileUpload[] | undefined };
+export type InferResponseType<Opts> =
+    Opts extends { response: DataType<infer R, any> }
+    ? R
+    : any;
 
 /*** reponse types ***/
 export const HTTPStatus = {
