@@ -30,6 +30,8 @@ async function parseMultiPartBody(ctx: PipeContext<any, any, any>, route: Route)
 
         /* setup event handler */
         busbuy.on("file", (name, file, info) => {
+            // TODO: check for max size
+            // TODO: check for max amount
             /* check if file is allowed */
             if (route.files && !route.files[name]) {
                 /* skip file */
@@ -172,6 +174,18 @@ export const parseAndValidateBodyStage = (route: Route, options: BodyParserOptio
             }
 
             /* validate & transform body */
+            if (route.files) {
+                /* validate if required files are present */
+                for (const fileGroup in route.files) {
+                    const fileOption = route.files[fileGroup];
+                    if (
+                        fileOption.required &&
+                        (!ctx.files || !ctx.files[fileGroup])
+                    ) {
+                        throw new ValidationPipeErr(`Missing required file ${fileGroup}`);
+                    }
+                }
+            }
             if (route.body && validateBody) {
                 try {
                     ctx.body = route.body.validate(ctx.body);
