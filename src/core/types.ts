@@ -45,9 +45,11 @@ export type Route = {
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
+    params?: ObjectType<any, false>;    // TODO: only allow schemas very paramters are none optional
+    query?: ObjectType<any, boolean>;
 }
 export type RouteOptions = {
-    params?: ObjectType<any, false>;
+    params?: ObjectType<any, false>;    // TODO: only allow schemas very paramters are none optional
     query?: ObjectType<any, boolean>;
     body?: DataType<any, boolean>;
     files?: Record<string, FileOption>;

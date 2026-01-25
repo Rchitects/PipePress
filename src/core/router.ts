@@ -1,6 +1,6 @@
 /*** imports ***/
 import fastJSON from "fast-json-stringify";
-import { parseAndValidateBodyStage } from "../stages/bodyParser";
+import { parseAndValidateRequestStage } from "../stages/requestParser";
 import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./types";
 
 /*** definition ***/
@@ -64,7 +64,7 @@ export class Router {
             const routeStages = [
                 ...inheritedStages,
                 ...this._stages,
-                parseAndValidateBodyStage(route, { limit: this._routerConfig.maxBodyLength }),  // TODO: create one global body-parser stage (save memory)
+                parseAndValidateRequestStage(route, { bodyLimit: this._routerConfig.maxBodyLength }),  // TODO: create one global body-parser stage (save memory)
                 ...(route.stages || [])
             ];
             return {
@@ -75,7 +75,9 @@ export class Router {
                 body: route.body,
                 serializer: route.serializer,
                 contentType: route.contentType,
-                files: route.files
+                files: route.files,
+                params: route.params,
+                query: route.query
             } as Route;
         });
         /* get sub routes */

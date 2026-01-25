@@ -8,18 +8,18 @@ import os from "node:os";
 import { createWriteStream } from "node:fs";
 
 /*** types ***/
-type BodyParserOptions = {
-    limit?: number
+type RequestParserOptions = {
+    bodyLimit?: number
 };
 
 /*** definitions ***/
-const DEFAULT_OPTS: Required<BodyParserOptions> = {
-    limit: 0
+const DEFAULT_OPTS: Required<RequestParserOptions> = {
+    bodyLimit: 0
 }
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
 /*** functions ***/
-async function parseMultiPartBody(ctx: PipeContext<any, any, any>, route: Route) {
+async function parseMultiPartBody(ctx: PipeContext<any>, route: Route) {
     return new Promise<{ fields: Record<string, string>, files: Record<string, FileUpload[]> }>((resolve, reject) => {
         /* create busboy instance */
         const busbuy = Busboy({ headers: ctx.req.headers });
@@ -90,20 +90,76 @@ async function parseMultiPartBody(ctx: PipeContext<any, any, any>, route: Route)
         ctx.req.pipe(busbuy);
     });
 }
+function normalizeQuery(query: Record<string, string>): Record<string, string | boolean> {
+    const res = {} as Record<string, string | boolean>;
+
+    for (const key in query) {
+        const val = query[key];
+
+        if (Array.isArray(val)) {
+            res[key] = val.pop();
+        }
+        else if (val === '') {
+            res[key] = true;
+        }
+        else {
+            res[key] = val;
+        }
+    }
+
+    return res;
+}
 
 /*** body-parser stage ***/
-export const parseAndValidateBodyStage = (route: Route, options: BodyParserOptions): PipeStage<any> => {
+export const parseAndValidateRequestStage = (route: Route, options: RequestParserOptions): PipeStage<any> => {
     const opts = { ...DEFAULT_OPTS, ...options };
     return {
         handler: async (ctx) => {
+            /**
+             * PARAMS
+             */
+            if (route.params) {
+                /* parse and validate the parameter */
+                try {
+                    ctx.params = route.params.validate(ctx.params);
+                }
+                catch (e) {
+                    if (e instanceof TypeError) {
+                        throw new ValidationPipeErr(`Parameter validation failed: ${e.message}`);
+                    }
+                    throw new BadRequestPipeErr('Parameter validation failed (unknown failure)');
+                }
+            }
+            /**
+             * QUERY
+             */
+            if (ctx.query) {
+                ctx.query = normalizeQuery(ctx.query);
+            }
+            if (route.query) {
+                /* parse and validate the parameter */
+                try {
+                    ctx.query = route.query.validate(ctx.query);
+                }
+                catch (e) {
+                    if (e instanceof TypeError) {
+                        throw new ValidationPipeErr(`Query-parameter validation failed: ${e.message}`);
+                    }
+                    throw new BadRequestPipeErr('Query-parameter validation failed (unknown failure)');
+                }
+            }
+
+            /**
+             * BODY
+             */
             const len = parseInt(ctx.req.headers['content-length'] || '0');
             const isBodyMethod = ALLOWED_BODY_METHODS.includes(ctx.req.method as HTTPMethod);
 
             /* stop if payload to big */
-            if (opts.limit > 0 && len > opts.limit) {
+            if (opts.bodyLimit > 0 && len > opts.bodyLimit) {
                 /* body to big */
                 ctx.req.resume();   // TODO: give him hard cut-off with destroy?
-                throw new ContentTooLargePipeErr(opts.limit, len);
+                throw new ContentTooLargePipeErr(opts.bodyLimit, len);
             }
 
             /* ignore body if not needed */
