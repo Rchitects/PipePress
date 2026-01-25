@@ -37,7 +37,9 @@ export class Router {
             body: optionsOrHandler.body,
             serializer: serializer,
             contentType: optionsOrHandler.contentType,
-            files: optionsOrHandler.files
+            files: optionsOrHandler.files,
+            params: optionsOrHandler.params,
+            query: optionsOrHandler.query
         });
     }
     /*** public functions ***/
