@@ -54,9 +54,16 @@ app.post('/ping', async (ctx) => {
 
 /* router */
 const router = new Router();
-router.use({ handler: async (ctx) => { console.log('All user routes use this stage') } });
-router.get('/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx) => {
+type Test = { test: string };
+router.use({
+    handler: async (ctx, state: Test) => {
+        console.log('All user routes use this stage');
+        state.test = 'Hello wordld';
+    }
+});
+router.get('/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx, state: Test) => {
     console.log('Get user with id ', ctx.params.id);
+    console.log('Test value from higher stage:', state.test);
     return { name: 'Johnny', id: ctx.params.id, created: new Date() };
 });
 router.get('/all', {

@@ -11,7 +11,7 @@ const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
 /*** class ***/
 export class Router {
     /*** variables ***/
-    protected _stages: PipeStage<any>[] = [];
+    protected _stages: PipeStage<any, any>[] = [];
     protected _routes: Route[] = [];
     protected _children: { prefix: string, router: Router }[] = [];
     protected _routerConfig: Required<PipeRouterConfig>;
@@ -21,7 +21,7 @@ export class Router {
     }
 
     /*** private functions ***/
-    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions, handler: PipeRouteHandler<any>): void {
+    private _on(method: HTTPMethod, path: string, optionsOrHandler: RouteOptions, handler: PipeRouteHandler<any, any>): void {
         /* check for serialzier */
         let serializer: stringyfy<any> = JSON.stringify;
         if (optionsOrHandler.response) {
@@ -45,7 +45,7 @@ export class Router {
     /*** public functions ***/
     // TODO: Typesafety
     // TODO: Improve stages defintion
-    use(stage: PipeStage<any>): Router {
+    use<Res,State = {}>(stage: PipeStage<Res, State>): Router {
         this._stages.push(stage);
         return this;
     }
@@ -54,7 +54,7 @@ export class Router {
         this._children.push({ prefix: path, router: router });
     }
 
-    collectRoutes(prefix: string = '', inheritedStages: PipeStage<any>[] = []): Route[] {
+    collectRoutes(prefix: string = '', inheritedStages: PipeStage<any, any>[] = []): Route[] {
         /* collect own routes */
         const routes: Route[] = this._routes.map((route) => {
             /* build route pipeline
@@ -93,37 +93,37 @@ export class Router {
 
 
     /*** public HTTP functions ***/
-    get<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
-    get<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
-    get(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
+    get<State = {}>(path: string, handler: PipeRouteHandler<RouteOptions, State>): void;
+    get<State = {}, Opts extends RouteOptions = RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts, State>): void;
+    get(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any>, handler?: PipeRouteHandler<any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('GET', path, opts, hand!);
     }
-    post<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
-    post<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
-    post(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
+    post<State = {}>(path: string, handler: PipeRouteHandler<RouteOptions, State>): void;
+    post<State = {}, Opts extends RouteOptions = RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts, State>): void;
+    post(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any>, handler?: PipeRouteHandler<any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('POST', path, opts, hand!);
     }
-    put<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
-    put<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
-    put(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
+    put<State = {}>(path: string, handler: PipeRouteHandler<RouteOptions, State>): void;
+    put<State = {}, Opts extends RouteOptions = RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts, State>): void;
+    put(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any>, handler?: PipeRouteHandler<any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PUT', path, opts, hand!);
     }
-    patch<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
-    patch<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
-    patch(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
+    patch<State = {}>(path: string, handler: PipeRouteHandler<RouteOptions, State>): void;
+    patch<State = {}, Opts extends RouteOptions = RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts, State>): void;
+    patch(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any>, handler?: PipeRouteHandler<any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PATCH', path, opts, hand!);
     }
-    delete<Opts extends RouteOptions>(path: string, handler: PipeRouteHandler<Opts>): void;
-    delete<Opts extends RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts>): void;
-    delete(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any>, handler?: PipeRouteHandler<any>) {
+    delete<State = {}>(path: string, handler: PipeRouteHandler<RouteOptions, State>): void;
+    delete<State = {}, Opts extends RouteOptions = RouteOptions>(path: string, options: Opts, handler: PipeRouteHandler<Opts, State>): void;
+    delete(path: string, optionsOrHandler: RouteOptions | PipeRouteHandler<any, any>, handler?: PipeRouteHandler<any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('DELETE', path, opts, hand!);

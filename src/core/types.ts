@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { ParsedType, DataType, ObjectType } from "./datatypes";
+import { ParsedType, DataType, ObjectType, SchemaDefinition } from "./datatypes";
 
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
@@ -21,7 +21,6 @@ export type PipeContext<Opts extends RouteOptions> = {
     query: ParsedType<Opts["query"]>;
     body: ParsedType<Opts['body']>;
     files: InferFiles<Opts["files"]>;
-    [key: string]: any; // TODO?
 }
 export type PipeResponse<Body = any> = {
     status: HTTPStatus;
@@ -30,31 +29,31 @@ export type PipeResponse<Body = any> = {
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
 }
-export type PipeStageHandler<Body> = (ctx: PipeContext<any>) => Promise<PipeResponse<Body> | void> | PipeResponse<Body> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Opts extends RouteOptions> = (ctx: PipeContext<Opts>) => MaybePromise<InferResponseType<Opts>>;
-export type PipeStage<Res> = {
-    handler: PipeStageHandler<Res>;
+export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Opts extends RouteOptions, State = {}> = (ctx: PipeContext<Opts>, state: State) => MaybePromise<InferResponseType<Opts>>;
+export type PipeStage<Res, State = {}> = {
+    handler: PipeStageHandler<Res, State>;
     serializer?: stringyfy<Res>;
 }
 export type Route = {
     method: HTTPMethod;
     path: string;
-    handler: PipeRouteHandler<any>;
+    handler: PipeRouteHandler<any, any>;
     serializer: stringyfy<any>;
-    stages?: PipeStage<any>[];
+    stages?: PipeStage<any, any>[];
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
-    params?: ObjectType<any, false>;    // TODO: only allow schemas very paramters are none optional
+    params?: ObjectType<SchemaDefinition<false>, false>;
     query?: ObjectType<any, boolean>;
 }
 export type RouteOptions = {
-    params?: ObjectType<any, false>;    // TODO: only allow schemas very paramters are none optional
+    params?: ObjectType<SchemaDefinition<false>, false>;
     query?: ObjectType<any, boolean>;
     body?: DataType<any, boolean>;
     files?: Record<string, FileOption>;
     response?: DataType<any, boolean>;
-    stages?: PipeStage<any>[];
+    stages?: PipeStage<any, any>[];
     contentType?: HTTPContentType;
 };
 

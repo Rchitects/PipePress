@@ -111,7 +111,7 @@ function normalizeQuery(query: Record<string, string>): Record<string, string | 
 }
 
 /*** body-parser stage ***/
-export const parseAndValidateRequestStage = (route: Route, options: RequestParserOptions): PipeStage<any> => {
+export const parseAndValidateRequestStage = (route: Route, options: RequestParserOptions): PipeStage<void> => {
     const opts = { ...DEFAULT_OPTS, ...options };
     return {
         handler: async (ctx) => {

@@ -23,7 +23,7 @@ export class PipePress extends Router {
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _notFoundCustom: PipeStage<any> | undefined;
+    private _notFoundCustom: PipeStage<any, any> | undefined;
     private _pipePressConfig: PipePressConfig;
     private _allowedMethods: Record<string, Set<HTTPMethod>> = {};
 
@@ -83,13 +83,13 @@ export class PipePress extends Router {
             this._reqRouter.on(route.method, route.path, async (req, res, params, store, searchParams) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params, searchParams);
-
+                const state = {} as any;
                 /* start executing all stages & handler */
                 try {
                     /* stages */
                     if (route.stages) {
                         for (const stage of route.stages) {
-                            const stageRes = await stage.handler(ctx);
+                            const stageRes = await stage.handler(ctx, state);
 
                             if (stageRes) {
                                 /* if stage returned something stop pipeline with response */
@@ -99,7 +99,7 @@ export class PipePress extends Router {
                     }
 
                     /* main handler */
-                    const mainRes = await route.handler(ctx);
+                    const mainRes = await route.handler(ctx, state);
 
                     if (mainRes) {
                         /* create a valid OK response */
@@ -178,8 +178,8 @@ export class PipePress extends Router {
     }
 
     // TODO: remove serializer in the PipeStageHandler response?
-    setNotFoundHandler<T>(handler: PipeStageHandler<T>, response?: DataType<T, boolean>) {
-        const notFoundStage: PipeStage<T> = {
+    setNotFoundHandler<T, Extra = {}>(handler: PipeStageHandler<T, Extra>, response?: DataType<T, boolean>) {
+        const notFoundStage: PipeStage<T, Extra> = {
             handler: handler
         };
         if (response) {
@@ -301,13 +301,14 @@ export class PipePress extends Router {
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
         /* create context for this route */
-        const ctx = this._createContext(req, res, {},{});
-
+        const ctx = this._createContext(req, res, {}, {});
+        const state = {} as any;
         /* start executing all global stages */
         try {
             /* stages */
+
             for (const stage of this._stages) {
-                const stageRes = await stage.handler(ctx);
+                const stageRes = await stage.handler(ctx, state);
 
                 if (stageRes) {
                     /* if stage returned something stop pipeline with response */
@@ -317,7 +318,7 @@ export class PipePress extends Router {
 
             /* run not found handler */
             if (this._notFoundCustom) {
-                const res = await this._notFoundCustom.handler(ctx);
+                const res = await this._notFoundCustom.handler(ctx, state);
                 if (res) {
                     /* if the handler did not set a serializer, use the custom one */
                     if (!res.serializer && this._notFoundCustom.serializer) {
