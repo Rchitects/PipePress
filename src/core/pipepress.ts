@@ -9,6 +9,11 @@ import { Router } from "./router";
 import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./types";
 import inject from "light-my-request";
 
+/*** types ***/
+type RouteStore = {
+    pattern: string
+}
+
 /*** definitions ***/
 const DEFAULT_CONFIG: PipePressConfig = {
     maxBodyLength: 0,
@@ -37,10 +42,6 @@ export class PipePress extends Router {
         this._pipePressConfig = { ...DEFAULT_CONFIG, ...options };
         if (this._pipePressConfig.cors) {
             this._pipePressConfig.cors = { ...DEFAULT_CORS_CONFIG, ...this._pipePressConfig.cors };
-        }
-        /* add CORS stage if needed */
-        if (this._pipePressConfig.cors) {
-            this.use({ handler: this._corsStageHandler.bind(this) });
         }
     }
 
@@ -80,12 +81,16 @@ export class PipePress extends Router {
 
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
-            this._reqRouter.on(route.method, route.path, async (req, res, params, store, searchParams) => {
+            this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, searchParams) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params, searchParams);
                 const state = {} as any;
                 /* start executing all stages & handler */
                 try {
+                    /* run CORS stage if needed */
+                    if (this._pipePressConfig.cors) {
+                        this._corsStageHandler(ctx, store.pattern);
+                    }
                     /* stages */
                     if (route.stages) {
                         for (const stage of route.stages) {
@@ -139,7 +144,7 @@ export class PipePress extends Router {
                         }
                     }
                 }
-            });
+            }, { pattern: route.path } as RouteStore);
         }
 
         this._build = true;
@@ -342,11 +347,11 @@ export class PipePress extends Router {
             this._handleError(e, ctx);
         }
     }
-    private _corsStageHandler(ctx: PipeContext<any>) {
+    private _corsStageHandler(ctx: PipeContext<any>, path: string) {
         /* ORIGIN */
         ctx.res.setHeader('Access-Control-Allow-Origin', '*');  // TODO: make configurable
         /* METHODS */
-        const allowedMethods = this._allowedMethods[ctx.req.url || ''];
+        const allowedMethods = this._allowedMethods[path];
         if (allowedMethods) {
             ctx.res.setHeader('Access-Control-Allow-Methods', Array.from(allowedMethods).join(', '));
         }

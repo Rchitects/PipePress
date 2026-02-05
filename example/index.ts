@@ -48,6 +48,9 @@ const dataBody = dt.Object({
 app.post('/data/:id', { body: dataBody, params: dt.Object({ id: dt.String() }) }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
+app.get('/data/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx) => {
+    return { id: ctx.params.id };
+});
 app.post('/ping', async (ctx) => {
     return { ...(ctx.body || {}) };
 });
