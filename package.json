@@ -1,6 +1,6 @@
 {
   "name": "@rchitects/pipepress",
-  "version": "0.3.1-beta.0",
+  "version": "0.4.0-beta.0",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -44,7 +44,7 @@
     "@types/express": "^5.0.5",
     "@types/http-errors": "^2.0.5",
     "@types/json-schema": "^7.0.15",
-    "@types/node": "^24.9.1",
+    "@types/node": "^24.12.2",
     "@types/pidusage": "^2.0.5",
     "@types/qs": "^6.14.0",
     "@types/range-parser": "^1.2.7",

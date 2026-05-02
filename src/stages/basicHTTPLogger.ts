@@ -1,5 +1,5 @@
 /*** imports ***/
-import { PipeStage } from "../core/types";
+import { PipeStage } from "../core/models";
 import { fastUUID, getIP } from "../core/utils";
 
 /*** types ***/

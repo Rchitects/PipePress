@@ -1,7 +1,7 @@
 /*** imports ***/
 import path from "path";
 import { BadRequestPipeErr, ContentTooLargePipeErr, ValidationPipeErr } from "../core/error";
-import { FileUpload, HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/types";
+import { FileUpload, HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
 import { fastUUID, isContentType } from "../core/utils";
 import Busboy from "busboy";
 import os from "node:os";
