@@ -1,6 +1,6 @@
 /*** imports ***/
 import { TooManyRequestsPipeErr } from "../core/error";
-import { PipeStage } from "../core/types";
+import { PipeStage } from "../core/models";
 import { getIP, sleep } from "../core/utils";
 
 /*** types ***/

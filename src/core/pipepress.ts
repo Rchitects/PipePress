@@ -6,8 +6,9 @@ import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
 import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./types";
+import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
 import inject from "light-my-request";
+import { isPipeResponse, pipeResponse } from "./utils";
 
 /*** types ***/
 type RouteStore = {
@@ -106,19 +107,22 @@ export class PipePress extends Router {
                     /* main handler */
                     const mainRes = await route.handler(ctx, state);
 
-                    if (mainRes) {
+                    if (isPipeResponse(mainRes)) {
+                        this._sendResponse(res, mainRes);
+                    }
+                    else if (mainRes) {
                         /* create a valid OK response */
-                        this._sendResponse(res, {
+                        this._sendResponse(res, pipeResponse({
                             status: HTTPStatus.OK,
                             body: mainRes,
                             serializer: route.serializer,
-                            contentType: route.contentType
+                            contentType: route.contentType,
                             // headers: ?? TODO
-                        });
+                        }))
                     }
                     else {
                         /* route is a no content response */
-                        this._sendResponse(res, { status: HTTPStatus.NO_CONTENT })
+                        this._sendResponse(res, pipeResponse({ status: HTTPStatus.NO_CONTENT }));
                     }
                 }
                 catch (e) {

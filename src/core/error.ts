@@ -1,9 +1,10 @@
 /*** imports ***/
 import { HTTPMethod } from "find-my-way";
-import { HTTPStatus, PipeResponse, stringyfy } from "./types";
+import { HTTPStatus, PipeResponse, stringyfy } from "./models";
 import { DataType } from "./datatypes";
 import fastJSON from "fast-json-stringify";
 import dt from "./datatypes";
+import { pipeResponse } from "./utils";
 
 /*** types for schemas ***/
 type PipeErrBasePayload = {
@@ -88,11 +89,11 @@ export abstract class PipeError<T extends PipeErrBasePayload> {
         }
 
         /* return response */
-        return {
+        return pipeResponse({
             status: this.status,
             body: clone,
             serializer: this._serializer
-        };
+        });
     }
 }
 /*** pre-defiened errors ***/

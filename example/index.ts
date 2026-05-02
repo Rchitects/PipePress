@@ -1,5 +1,5 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, PipePress, rateLimiter, Router } from "../dist";
+import { basicHTTPLogger, HTTPStatus, PipePress, pipeResponse, rateLimiter, Router } from "../dist";
 import dt, { ParsedType } from "../dist/core/datatypes";
 
 /*** pre-defined stages ***/
@@ -127,6 +127,21 @@ app.post('/file-upload', { files: { uno: { required: true }, duo: { required: fa
     return {
         message: "Thanks Mr"
     };
+});
+
+/* random status */
+app.get('/random-status', { response: dt.Object({ message: dt.String() }) }, async (ctx) => {
+
+    const rand = Math.random() * 10;
+
+    if (rand < 3) {
+        return pipeResponse({ status: HTTPStatus.FOUND, headers: { 'Location': 'https://google.com' } });
+    }
+    if (rand < 8) {
+        return pipeResponse({ status: HTTPStatus.BAD_REQUEST, body: { message: 'Bad request' } });
+    }
+
+    return { message: 'Random status worked' };
 });
 
 /* create routes */

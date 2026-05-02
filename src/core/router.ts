@@ -1,7 +1,7 @@
 /*** imports ***/
 import fastJSON from "fast-json-stringify";
 import { parseAndValidateRequestStage } from "../stages/requestParser";
-import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./types";
+import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {

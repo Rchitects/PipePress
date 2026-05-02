@@ -2,6 +2,9 @@
 import { IncomingMessage, ServerResponse } from "http";
 import { ParsedType, DataType, ObjectType, SchemaDefinition } from "./datatypes";
 
+/*** definitions ***/
+export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
+
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
 /*** router types ***/
@@ -23,6 +26,7 @@ export type PipeContext<Opts extends RouteOptions> = {
     files: InferFiles<Opts["files"]>;
 }
 export type PipeResponse<Body = any> = {
+    [PIPE_RESPONSE_BRAND]: true,
     status: HTTPStatus;
     body?: Body;
     headers?: Record<string, string>;
@@ -30,7 +34,7 @@ export type PipeResponse<Body = any> = {
     contentType?: HTTPContentType;
 }
 export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Opts extends RouteOptions, State = {}> = (ctx: PipeContext<Opts>, state: State) => MaybePromise<InferResponseType<Opts>>;
+export type PipeRouteHandler<Opts extends RouteOptions, State = {}> = (ctx: PipeContext<Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
 export type PipeStage<Res, State = {}> = {
     handler: PipeStageHandler<Res, State>;
     serializer?: stringyfy<Res>;
@@ -85,6 +89,8 @@ export const HTTPStatus = {
     OK: 200,
     CREATED: 201,
     NO_CONTENT: 204,
+    // forward
+    FOUND: 302,
     // client error
     BAD_REQUEST: 400,
     UNAUTHORIZED: 401,
