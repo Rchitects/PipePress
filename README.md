@@ -5,7 +5,8 @@ PipePress is a high-performance, Express-inspired Node.js web framework that rep
 ## Highlights
 - ⚡ Precompiled route pipelines for minimal dispatch overhead
 - 🧱 Composable stages: global, router-level, route-level
-- 📦 Request parsing with built-in body, query, params and multipart file support
+- 📦 Request parsing with built-in body, query, params, cookies and multipart file support
+- 🍪 Cookie handling with parsed request cookies and response `Set-Cookie` support
 - 🧠 TypeScript-friendly schema validation with `datatypes`
 - 🚀 Fast JSON serialization via `fast-json-stringify`
 - 🌐 Automatic CORS preflight support
@@ -64,6 +65,7 @@ Route `options` may include:
 - `params`: URL parameter schema
 - `query`: query string schema
 - `body`: request body schema
+- `cookies`: request cookie schema
 - `files`: multipart file options
 - `response`: response schema for fast serialization
 - `stages`: route-local stages
@@ -102,6 +104,7 @@ Validation is applied for:
 - path `params`
 - query string values
 - JSON / URL-encoded request bodies
+- request cookies when `cookies` are declared
 - multipart form-body fields when `files` are declared
 
 ## Response handling
@@ -119,6 +122,19 @@ return pipeResponse({
 ```
 
 Custom non-JSON content types are also supported via the route `contentType` option.
+
+`pipeResponse()` also supports response cookies with `cookies: [{ name, value, ...options }]`:
+
+```ts
+import { HTTPStatus, pipeResponse } from "@rchitects/pipepress";
+
+return pipeResponse({
+  status: HTTPStatus.FOUND,
+  headers: { Location: "https://example.com" },
+  cookies: [{ name: 'session', value: 'abc123', httpOnly: true, path: '/' }],
+  body: { message: "redirect" },
+});
+```
 
 ## Error handling
 
@@ -181,6 +197,7 @@ Current benchmark results from the repository:
 See `example/index.ts` for a working demonstration of:
 - request validation
 - nested routers
+- cookie parsing and `Set-Cookie` response support
 - file upload handling
 - custom route stages
 - CORS support
