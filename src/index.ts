@@ -5,4 +5,4 @@ export { Router } from "./core/router";
 export * from "./core/error";
 export { basicHTTPLogger } from "./stages/basicHTTPLogger";
 export { rateLimiter } from "./stages/rateLimiter";
-export { pipeResponse } from "./core/utils";
+export { pipeResponse, setCookie, clearCookie } from "./core/utils";

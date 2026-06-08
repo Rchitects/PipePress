@@ -1,11 +1,11 @@
 /*** imports ***/
+import Busboy from "busboy";
+import { createWriteStream } from "node:fs";
+import os from "node:os";
 import path from "path";
 import { BadRequestPipeErr, ContentTooLargePipeErr, ValidationPipeErr } from "../core/error";
-import { FileUpload, HTTPContentType, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
+import { FileUpload, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
 import { fastUUID, isContentType } from "../core/utils";
-import Busboy from "busboy";
-import os from "node:os";
-import { createWriteStream } from "node:fs";
 
 /*** types ***/
 type RequestParserOptions = {
@@ -109,12 +109,48 @@ function normalizeQuery(query: Record<string, string>): Record<string, string | 
 
     return res;
 }
+function parseCookies(ctx: PipeContext<any>): Record<string, string> {
+    const header = ctx.req.headers.cookie;
+    if (!header) return {};
+
+    const cookies: Record<string, string> = {};
+    /* cookies are joined with ";" */
+    for (const pair of header.split(';')) {
+        /* find first "=" -> seperation key=value;  In value a "=" is also valid */
+        const eqIdx = pair.indexOf('=');
+        if (eqIdx < 0) continue;
+        const key = pair.slice(0, eqIdx).trim();
+        const val = pair.slice(eqIdx + 1).trim();
+        if (!key) continue;
+        try {
+            cookies[key] = decodeURIComponent(val);
+        } catch {
+            cookies[key] = val; // malformed encoding → raw value
+        }
+    }
+    return cookies;
+}
 
 /*** body-parser stage ***/
 export const parseAndValidateRequestStage = (route: Route, options: RequestParserOptions): PipeStage<void> => {
     const opts = { ...DEFAULT_OPTS, ...options };
     return {
         handler: async (ctx) => {
+            /**
+             * COOKIES (raw and typed)
+             */
+            ctx.rawCookies = parseCookies(ctx);
+            if (route.cookies) {
+                try {
+                    ctx.cookies = route.cookies.validate(ctx.rawCookies);
+                }
+                catch (e) {
+                    if (e instanceof TypeError) {
+                        throw new ValidationPipeErr(`Cookie validation failed: ${e.message}`);
+                    }
+                    throw new BadRequestPipeErr('Cookie validation failed (unknown failure)');
+                }
+            }
             /**
              * PARAMS
              */
