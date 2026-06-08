@@ -8,7 +8,7 @@ import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
 import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
 import inject from "light-my-request";
-import { isPipeResponse, pipeResponse } from "./utils";
+import { isPipeResponse, pipeResponse, setCookie } from "./utils";
 
 /*** types ***/
 type RouteStore = {
@@ -268,6 +268,13 @@ export class PipePress extends Router {
         if (result.headers) {
             for (const [head, val] of Object.entries(result.headers)) {
                 res.setHeader(head, val);
+            }
+        }
+
+        /* set cookies */
+        if (result.cookies) {
+            for (const { name, value, ...opts } of result.cookies) {
+                setCookie(res, name, value, opts);
             }
         }
 
