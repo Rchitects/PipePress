@@ -39,7 +39,8 @@ export class Router {
             contentType: optionsOrHandler.contentType,
             files: optionsOrHandler.files,
             params: optionsOrHandler.params,
-            query: optionsOrHandler.query
+            query: optionsOrHandler.query,
+            cookies: optionsOrHandler.cookies
         });
     }
     /*** public functions ***/

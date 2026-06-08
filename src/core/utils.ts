@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage } from "http";
-import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, stringyfy } from "./models";
+import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieEntry, stringyfy } from "./models";
 
 /*** functions ***/
 export const isContentType = (source: HTTPContentType | string, ofType: HTTPContentType): boolean => {
@@ -37,6 +37,7 @@ export const pipeResponse = <Body = any>(opts: {
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
+    cookies?: SetCookieEntry[];
 }): PipeResponse<Body> => {
     return { [PIPE_RESPONSE_BRAND]: true, ...opts };
 }
