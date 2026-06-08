@@ -1,5 +1,5 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, HTTPStatus, PipePress, pipeResponse, rateLimiter, Router } from "../dist";
+import { basicHTTPLogger, HTTPStatus, PipePress, pipeResponse, rateLimiter, Router, setCookie } from "../dist";
 import dt, { ParsedType } from "../dist/core/datatypes";
 
 /*** pre-defined stages ***/
@@ -142,6 +142,16 @@ app.get('/random-status', { response: dt.Object({ message: dt.String() }) }, asy
     }
 
     return { message: 'Random status worked' };
+});
+
+/* cookies */
+app.get('/cookies', {
+    query: dt.Object({ name: dt.String() }),
+    cookies: dt.Object({ age: dt.Number() })
+}, async (ctx) => {
+    console.log(ctx.rawCookies);
+    setCookie(ctx.res, 'Name', ctx.query.name, { maxAge: 100_000 });
+    return { message: `Hallo ${ctx.query.name}! You are ${ctx.cookies.age}` };
 });
 
 /* create routes */
