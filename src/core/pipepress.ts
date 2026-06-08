@@ -252,8 +252,10 @@ export class PipePress extends Router {
             res,
             params,
             query,
+            rawCookies: {},
             body: undefined,
-            files: undefined
+            files: undefined,
+            cookies: undefined
         };
         return ctx;
     }

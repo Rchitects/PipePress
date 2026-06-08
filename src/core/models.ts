@@ -24,12 +24,15 @@ export type PipeContext<Opts extends RouteOptions> = {
     query: ParsedType<Opts["query"]>;
     body: ParsedType<Opts['body']>;
     files: InferFiles<Opts["files"]>;
+    rawCookies: Record<string, string>;
+    cookies: InferCookies<Opts["cookies"]>;
 }
 export type PipeResponse<Body = any> = {
     [PIPE_RESPONSE_BRAND]: true,
     status: HTTPStatus;
     body?: Body;
     headers?: Record<string, string>;
+    cookies?: SetCookieEntry[];
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
 }
@@ -50,6 +53,7 @@ export type Route = {
     files?: Record<string, FileOption>;
     params?: ObjectType<SchemaDefinition<false>, false>;
     query?: ObjectType<any, boolean>;
+    cookies?: ObjectType<any, boolean>;
 }
 export type RouteOptions = {
     params?: ObjectType<SchemaDefinition<false>, false>;
@@ -59,6 +63,7 @@ export type RouteOptions = {
     response?: DataType<any, boolean>;
     stages?: PipeStage<any, any>[];
     contentType?: HTTPContentType;
+    cookies?: ObjectType<any, boolean>;
 };
 
 
@@ -169,6 +174,26 @@ export type HTTPContentType =
     | 'image/jpeg'
     | 'image/png';
 export type stringyfy<T> = (data: T) => string;
+/*** cookie types ***/
+export type InferCookies<T> =
+    T extends ObjectType<any, any>
+    ? ParsedType<T>
+    : undefined;
+export type CookieSameSite = 'Strict' | 'Lax' | 'None';
+export type SetCookieOptions = {
+    maxAge?: number;        // seconds
+    expires?: Date;
+    path?: string;          // default: '/'
+    domain?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    sameSite?: CookieSameSite;
+    partitioned?: boolean;  // CHIPS
+}
+export type SetCookieEntry = SetCookieOptions & {
+    name: string;
+    value: string;
+}
 
 /*** pipepress types ***/
 export type PipeRouterConfig = {
