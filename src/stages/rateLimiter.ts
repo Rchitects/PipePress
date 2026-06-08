@@ -4,67 +4,86 @@ import { PipeStage } from "../core/models";
 import { getIP, sleep } from "../core/utils";
 
 /*** types ***/
-type RateLimitRecord = {
-    count: number;
-    startMs: number;
+type BucketRecord = {
+    tokens: number;
+    lastRefillMs: number;
 }
 type RateLimitConfig = {
-    maxRequests?: number;
-    windowMs?: number;
-    delayMs?: number;
+    maxTokens?: number;
+    refillAmount?: number;
+    refillIntervalMs?: number;
+    cleanupAfterMs?: number;
 }
 
 /*** defintions ***/
-const rateLimitRecords: Map<string, RateLimitRecord> = new Map();
+const rateLimitBucket = new Map<string, BucketRecord>();
 const RATE_LIMIT_CONFIG_DEFAULT: Required<RateLimitConfig> = {
-    maxRequests: 10,
-    windowMs: 10000,
-    delayMs: 0
+    maxTokens: 10,
+    refillAmount: 1,
+    refillIntervalMs: 1000,
+    cleanupAfterMs: 60_000
 }
+let cleanupTask: NodeJS.Timeout | undefined;
 
 /*** stage-handler ***/
 export const rateLimiter = (config?: RateLimitConfig): PipeStage<void> => {
     const options: Required<RateLimitConfig> = { ...RATE_LIMIT_CONFIG_DEFAULT, ...config };
 
+    /* create cleanup interval if not present */
+    if (!cleanupTask) {
+        cleanupTask = setInterval(() => {
+            const now = Date.now();
+            for (const [ip, bucket] of rateLimitBucket) {
+                if (now - bucket.lastRefillMs > options.cleanupAfterMs) {
+                    rateLimitBucket.delete(ip);
+                }
+            }
+        }, options.cleanupAfterMs);
+    }
+    /* create stage */
     return {
         handler: async (ctx) => {
             const now = Date.now();
-
-            /* extract IP */
             const IP = getIP(ctx.req);
 
-            /* get or create record */
-            let record = rateLimitRecords.get(IP);
-            if (!record) {
-                record = {
-                    count: 1,
-                    startMs: now
+            /* get or create bucket */
+            let bucket = rateLimitBucket.get(IP);
+            if (!bucket) {
+                /* first request */
+                bucket = {
+                    tokens: options.maxTokens - 1,
+                    lastRefillMs: now,
                 };
-                rateLimitRecords.set(IP, record);
+                rateLimitBucket.set(IP, bucket);
+                return;
             }
-            else if (now - record.startMs > options.windowMs) {
-                /* time window exceed, reset the record */
-                record.count = 1;
-                record.startMs = now;
-            }
-            else {
-                /* request is inside the time window */
-                record.count++;
-                if (record.count > options.maxRequests) {
-                    /* report rate limit exceeded */
-                    // TODO:
-                    console.warn(`[RateLimiter] IP ${IP} has exceeded the request limit of ${options.maxRequests} requests per ${options.windowMs} ms.`);
 
-                    /* apply delay if configured */
-                    if (options.delayMs > 0) {
-                        await sleep(options.delayMs * (record.count - options.maxRequests));
-                    }
+            /* refill tokens based on elapsed time */
+            const elapsed = now - bucket.lastRefillMs;
+            const refillCount = Math.floor(elapsed / options.refillIntervalMs);
 
-                    /* throw error to send response to user */
-                    const retryAfterMs = options.windowMs - (now - record.startMs);
-                    throw new TooManyRequestsPipeErr(retryAfterMs, options.maxRequests, record.count);
-                }
+            if (refillCount > 0) {
+                bucket.tokens = Math.min(
+                    options.maxTokens,
+                    bucket.tokens + refillCount * options.refillAmount
+                );
+                /* add the correct amount of ms to the lastRefill */
+                bucket.lastRefillMs += refillCount * options.refillIntervalMs;
             }
+
+            /* check if a token is available */
+            if (bucket.tokens <= 0) {
+                const msUntilNextToken = options.refillIntervalMs - (now - bucket.lastRefillMs);
+
+                console.warn(
+                    `[RateLimiter] IP ${IP} — bucket empty. Next token in ${msUntilNextToken}ms.`
+                );
+
+                throw new TooManyRequestsPipeErr(msUntilNextToken, options.maxTokens, 0);
+            }
+
+            /* tokens are still present and/or got refilled -> just consume one token and go on*/
+            bucket.tokens--;
         }
     }
 }
