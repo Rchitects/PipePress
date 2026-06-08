@@ -100,7 +100,7 @@ export abstract class PipeError<T extends PipeErrBasePayload> {
 export class DefaultPipeErr extends PipeError<DefaultPipeErrPayload> {
     public errName: string;
     constructor(err: Error) {
-        super(err.name, err.message, HTTPStatus.INTERNAL_ERROR, DefaultPipeErrSchema);
+        super(err.name, err.message, HTTPStatus.INTERNAL_SERVER_ERROR, DefaultPipeErrSchema);
         this.errName = err.name;
     }
 }
