@@ -27,7 +27,7 @@ import dt from "@rchitects/pipepress/dist/core/datatypes";
 
 const app = new PipePress({ cors: { preflight: 'auto' }, maxBodyLength: 10_000_000 });
 app.use(basicHTTPLogger());
-app.use(rateLimiter({ maxRequests: 20, windowMs: 10_000 }));
+app.use(rateLimiter({ maxTokens: 20, refillAmount: 1, refillIntervalMs: 1000 }));
 
 const api = new Router();
 api.get('/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx) => {
@@ -136,6 +136,20 @@ return pipeResponse({
 });
 ```
 
+### Cookie helpers
+
+In addition to returning cookies via `pipeResponse`, PipePress exposes helper functions to manipulate `Set-Cookie` headers directly on the outgoing response.
+
+```ts
+import { setCookie, clearCookie } from "@rchitects/pipepress";
+
+// set a cookie on the ServerResponse
+setCookie(ctx.res, 'session', 'abc123', { httpOnly: true, path: '/' });
+
+// clear a cookie
+clearCookie(ctx.res, 'session');
+```
+
 ## Error handling
 
 PipePress includes built-in error classes and a default error fallback:
@@ -164,7 +178,15 @@ This enables `OPTIONS` preflight routes automatically and sets common CORS respo
 Logs request start / finish events, response status and duration.
 
 ### rateLimiter
-Simple in-memory rate limiter with optional delay and request window control.
+Simple in-memory token-bucket rate limiter. Configure the bucket size and refill behaviour using the options shown below.
+
+```ts
+// allow bursts of up to 20 requests, refill 1 token per second
+app.use(rateLimiter({ maxTokens: 20, refillAmount: 1, refillIntervalMs: 1000 }));
+
+// advanced: refill 20 tokens every 10 seconds
+app.use(rateLimiter({ maxTokens: 20, refillAmount: 20, refillIntervalMs: 10_000 }));
+```
 
 ## Testing and injection
 
