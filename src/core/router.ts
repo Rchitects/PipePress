@@ -46,7 +46,7 @@ export class Router {
     /*** public functions ***/
     // TODO: Typesafety
     // TODO: Improve stages defintion
-    use<Res,State = {}>(stage: PipeStage<Res, State>): Router {
+    use<Res, State = {}>(stage: PipeStage<Res, State>): Router {
         this._stages.push(stage);
         return this;
     }
@@ -59,16 +59,23 @@ export class Router {
         /* collect own routes */
         const routes: Route[] = this._routes.map((route) => {
             /* build route pipeline
-                1) global / inherited stages
-                2) router stages
-                2) body parser
-                3) route-stages
+                1) preParseStages
+                2) parseRequestStage
+                3) inheritedStages
+                4) this router stages
+                5) route-specfic stages
             **/
-            const routeStages = [
+            const allStages = [
                 ...inheritedStages,
                 ...this._stages,
-                parseAndValidateRequestStage(route, { bodyLimit: this._routerConfig.maxBodyLength }),  // TODO: create one global body-parser stage (save memory)
                 ...(route.stages || [])
+            ];
+            const preParseStages = allStages.filter((stage) => stage.runBeforeParse);
+            const postParseStages = allStages.filter((stage) => !stage.runBeforeParse);
+            const routeStages = [
+                ...preParseStages,
+                parseAndValidateRequestStage(route, { bodyLimit: this._routerConfig.maxBodyLength }),  // TODO: create one global body-parser stage (save memory)
+                ...postParseStages
             ];
             return {
                 method: route.method,

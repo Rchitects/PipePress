@@ -37,6 +37,7 @@ function addToLogBuffer(message: string) {
 /*** pipe-stage ***/
 export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<void> => {
     return {
+        runBeforeParse: true,
         handler: async (ctx) => {
             const { method, url } = ctx.req;
             const startTime = Date.now();

@@ -33,7 +33,10 @@ async function parseMultiPartBody(ctx: PipeContext<any>, route: Route) {
             // TODO: check for max size
             // TODO: check for max amount
             /* check if file is allowed */
-            if (route.files && !route.files[name]) {
+            if (
+                !route.files ||
+                (route.files && !route.files[name])
+            ) {
                 /* skip file */
                 file.resume();
                 return;

@@ -40,6 +40,7 @@ export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any>, state: S
 export type PipeRouteHandler<Opts extends RouteOptions, State = {}> = (ctx: PipeContext<Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
 export type PipeStage<Res, State = {}> = {
     handler: PipeStageHandler<Res, State>;
+    runBeforeParse?: boolean;
     serializer?: stringyfy<Res>;
 }
 export type Route = {

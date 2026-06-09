@@ -104,17 +104,32 @@ app.get('/slow', async (ctx) => {
 });
 
 /* file upload */
-app.post('/file-upload', { files: { uno: { required: true }, duo: { required: false } }, body: dt.Object({ name: dt.String(), age: dt.Number().isOptional() }) }, async (ctx) => {
-    if (!ctx.files.uno) {
-        console.log('No files uploaded');
-    }
-    else {
-        console.log('Uno files Len', ctx.files.uno.length);
-        console.log('File content');
-        for (const file of ctx.files.uno) {
-            console.log(file.filename, file.path);
-        }
-    }
+app.post('/file-upload', {
+    // files: {
+    //     uno: { required: true },
+    //     duo: { required: false }
+    // },
+    body: dt.Object({
+        name: dt.String(),
+        age: dt.Number().isOptional()
+    }),
+    stages: [
+        { handler: (ctx) => console.log('Pefore parse', Date.now()), runBeforeParse: true },
+        { handler: (ctx) => console.log('After parse', Date.now()) }
+    ]
+}, async (ctx) => {
+    console.log('Files');
+    console.log(ctx.files);
+    // if (!ctx.files.uno) {
+    //     console.log('No files uploaded');
+    // }
+    // else {
+    //     console.log('Uno files Len', ctx.files.uno.length);
+    //     console.log('File content');
+    //     for (const file of ctx.files.uno) {
+    //         console.log(file.filename, file.path);
+    //     }
+    // }
     if (ctx.body) {
         console.log('Body');
         console.log(ctx.body);
