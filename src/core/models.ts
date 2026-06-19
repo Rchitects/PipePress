@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { DataType, ObjectType, ParsedType, SchemaDefinition } from "./datatypes";
+import { DataType, ObjectType, Infer, SchemaDefinition } from "./datatypes";
 
 /*** definitions ***/
 export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
@@ -20,9 +20,9 @@ export type ParamsType = { [key: string]: string | undefined }
 export type PipeContext<Opts extends RouteOptions> = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: ParsedType<Opts["params"]>;
-    query: ParsedType<Opts["query"]>;
-    body: ParsedType<Opts['body']>;
+    params: Infer<Opts["params"]>;
+    query: Infer<Opts["query"]>;
+    body: Infer<Opts['body']>;
     files: InferFiles<Opts["files"]>;
     rawCookies: Record<string, string>;
     cookies: InferCookies<Opts["cookies"]>;
@@ -178,7 +178,7 @@ export type stringyfy<T> = (data: T) => string;
 /*** cookie types ***/
 export type InferCookies<T> =
     T extends ObjectType<any, any>
-    ? ParsedType<T>
+    ? Infer<T>
     : undefined;
 export type CookieSameSite = 'Strict' | 'Lax' | 'None';
 export type SetCookieOptions = {

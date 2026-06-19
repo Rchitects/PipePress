@@ -16,14 +16,18 @@ PipePress is a high-performance, Express-inspired Node.js web framework that rep
 ## Installation
 
 ```bash
+# Install the latest stable release
 npm install @rchitects/pipepress
+
+# Or install the beta channel (matching the package version in this repo)
+npm install @rchitects/pipepress@beta
 ```
 
 ## Quick Start
 
 ```ts
 import { PipePress, Router, basicHTTPLogger, rateLimiter } from "@rchitects/pipepress";
-import dt from "@rchitects/pipepress/dist/core/datatypes";
+import dt from "@rchitects/pipepress/datatypes";
 
 const app = new PipePress({ cors: { preflight: 'auto' }, maxBodyLength: 10_000_000 });
 app.use(basicHTTPLogger());
@@ -84,7 +88,7 @@ Each route pipeline automatically includes:
 PipePress provides a lightweight `datatypes` schema API:
 
 ```ts
-import dt from "@rchitects/pipepress/dist/core/datatypes";
+import dt from "@rchitects/pipepress/datatypes";
 
 const bodySchema = dt.Object({
   name: dt.String(),
@@ -99,6 +103,8 @@ Supported validators include:
 - `dt.Date()`
 - `dt.Array().of(...)`
 - `dt.Object({...})`
+ - `dt.StringLiteral(...values)` — accept only the provided string literal values
+ - `dt.NumberLiteral(...values)` — accept only the provided numeric literal values
 
 Validation is applied for:
 - path `params`
@@ -106,6 +112,24 @@ Validation is applied for:
 - JSON / URL-encoded request bodies
 - request cookies when `cookies` are declared
 - multipart form-body fields when `files` are declared
+
+### Literal types
+
+PipePress `datatypes` now includes literal types for restricting values to a fixed set. Use `dt.StringLiteral(...)` or `dt.NumberLiteral(...)` to declare allowed values. These produce an `enum` JSON Schema and validate incoming values accordingly.
+
+```ts
+import dt from "@rchitects/pipepress/datatypes";
+
+const color = dt.StringLiteral('red', 'green', 'blue');
+const code = dt.NumberLiteral(100, 200);
+
+const schema = dt.Object({
+  color: color,
+  code: code.isOptional(),
+});
+
+// Incoming payload validation will only accept color as 'red'|'green'|'blue'
+```
 
 ## Response handling
 

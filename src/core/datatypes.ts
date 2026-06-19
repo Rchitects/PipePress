@@ -6,17 +6,22 @@ export type SchemaDefinition<Optional extends boolean = boolean> = Record<string
 type ParsedSchema<T extends SchemaDefinition> =
     { [K in keyof T as T[K] extends DataType<any, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
     { [K in keyof T as T[K] extends DataType<any, true> ? never : K]: ReturnType<T[K]["validate"]> };
-export type ParsedType<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
+export type Infer<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
+type Constructor<T> = { new(): T };
 
 /*** support functions ***/
 export function isIsoDate(str: any): boolean {
     if (str === null || str === undefined) return false;
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(str);
 }
-function validator<T extends DataType<any>>(type: { new(): T }) {
+function validator<T extends DataType<any>>(type: Constructor<T>) {
     return () => {
         return new type();
     }
+}
+function literalValidator<P extends string | number>(validator: Constructor<DataType<P>>) {
+    const inst = new validator();
+    return <T extends P>(...values: T[]) => new LiteralType<T>(values, inst);
 }
 
 /*** basic validation type ***/
@@ -141,11 +146,11 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
     }
 }
 export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
-    _schema: TSchema;
+    #schema: TSchema;
 
     constructor(schema: TSchema) {
         super();
-        this._schema = schema;
+        this.#schema = schema;
     }
 
     toJSONSchema(): JSONSchema7 {
@@ -153,8 +158,8 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
         const schema: JSONSchema7 = { type: 'object', properties: {}, required: [], additionalProperties: false };
 
         /* loop though schema definition */
-        for (const key in this._schema) {
-            const curSchema = this._schema[key];
+        for (const key in this.#schema) {
+            const curSchema = this.#schema[key];
             schema.properties![key] = curSchema.toJSONSchema();
             if (!curSchema.optional) {
                 schema.required!.push(key);
@@ -172,8 +177,8 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
         /* loop through entrys (keys) and validate / parsed them */
         const result: any = {};
 
-        for (const key in this._schema) {
-            const curSchema = this._schema[key];
+        for (const key in this.#schema) {
+            const curSchema = this.#schema[key];
 
             try {
                 curSchema.validateRequired(key, value);
@@ -190,6 +195,33 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
 
         return result;
     }
+
+    extend<ExtSchema extends SchemaDefinition>(schema: ExtSchema): ObjectType<TSchema & ExtSchema> {
+        // TODO: does not work for deep objects
+        const combined = { ...this.#schema, ...schema };
+        return new ObjectType(combined);
+    }
+}
+class LiteralType<T extends string | number> extends DataType<T> {
+    #values: readonly T[];
+    #validator: DataType<any>
+
+    constructor(values: readonly T[], validator: DataType<any>) {
+        super();
+        this.#values = values;
+        this.#validator = validator;
+    }
+    toJSONSchema(): JSONSchema7 {
+        return { enum: [...this.#values] };
+    }
+
+    validate(value: any): T {
+        const parsed = this.#validator.validate(value);
+        if (!this.#values.includes(parsed)) {
+            throw new TypeError(`must be one of: ${this.#values.map(v => `'${v}'`).join(' | ')}`);
+        }
+        return parsed as T;
+    }
 }
 /*** helper functions ***/
 function Object<T extends SchemaDefinition>(schema: T) {
@@ -202,5 +234,7 @@ export default {
     Boolean: validator(BooleanType),
     Date: validator(DateType),
     Array: validator(ArrayType),
-    Object
+    Object,
+    StringLiteral: literalValidator(StringType),
+    NumberLiteral: literalValidator(NumberType),
 }

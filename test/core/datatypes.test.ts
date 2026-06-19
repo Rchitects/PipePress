@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import dt, { isIsoDate } from "../../src/core/datatypes";
+import dt, { Infer, isIsoDate } from "../../src/core/datatypes";
+import fastJSON from "fast-json-stringify";
 
 describe('validation - basic types', () => {
     /* predefine validators */
@@ -7,6 +8,7 @@ describe('validation - basic types', () => {
     const string = dt.String();
     const boolean = dt.Boolean();
     const date = dt.Date();
+    const strLit = dt.StringLiteral('one', 'two', 'three');
     /* iIsoDate */
     it('should return false for empty stgrings', () => {
         expect(isIsoDate('')).toBe(false);
@@ -207,5 +209,32 @@ describe('validation - basic types', () => {
         const birthDate = new Date('1993-01-01T00:00:00.000Z');
         const parsed = object.validate({ name: 'John', age: 30, birth: birthDate.toISOString() });
         expect(parsed).toEqual({ name: 'John', age: 30, birth: birthDate });
+    });
+    it('should extend an other type without manipulate the orignall', () => {
+        const obj1 = dt.Object({ name: dt.String() });
+        const obj2 = obj1.extend({ age: dt.Number() });
+        const p1 = obj1.validate({ name: 'Peter' });
+        const p2 = obj2.validate({ name: 'Alex', age: 123 });
+        expect(p1).toEqual({ name: 'Peter' });
+    });
+    /* string literal */
+    it('should parse str literal to JSON schema', () => {
+        const sh = strLit.toJSONSchema();
+        expect(sh).toHaveProperty('enum');
+    });
+    it('should not parse a number into string literal', () => {
+        expect(() => {
+            strLit.validate(123);
+        }).toThrowError(TypeError);
+    });
+    it('should not parse a not contained string', () => {
+        expect(() => {
+            strLit.validate('four');
+        }).toThrowError(TypeError);
+    });
+    it('should parse the str as valid str literal', () => {
+        const p = strLit.validate('one');
+        expect(p).toBeTypeOf('string');
+        expect(p).toEqual('one');
     });
 });
