@@ -1,6 +1,6 @@
 /*** imports (compiled) ***/
-import { basicHTTPLogger, HTTPStatus, PipePress, pipeResponse, rateLimiter, Router, setCookie } from "../dist";
-import dt, { ParsedType } from "../dist/core/datatypes";
+import { BadRequestPipeErr, basicHTTPLogger, HTTPStatus, InternalPipeErr, PipePress, pipeResponse, rateLimiter, redirect, RouteNotFoundPipeErr, ValidationPipeErr, ContentTooLargePipeErr, TooManyRequestsPipeErr, UnauthorizedPipeErr, ForbiddenPipeErr, Router, setCookie } from "../dist";
+import dt, { Infer } from "../dist/core/datatypes";
 
 /*** pre-defined stages ***/
 /*** router ***/
@@ -26,7 +26,22 @@ app.use(rateLimiter());
 
 /* routes */
 app.get('/error', async (ctx) => {
-    throw new Error('WTF IS THIS');
+    const rand = Math.random() * 12;
+
+    if (rand < 1) throw new Error('WTF IS THIS');
+    if (rand < 2) throw new InternalPipeErr(new Error('INTRA LAN'));
+    if (rand < 3) throw new BadRequestPipeErr('This request is bad');
+    if (rand < 4) throw new ValidationPipeErr('Validation failed for demo');
+    if (rand < 5) throw new ContentTooLargePipeErr(1024, 2048);
+    if (rand < 6) throw new TooManyRequestsPipeErr(5000, 10, 11);
+    if (rand < 7) throw new UnauthorizedPipeErr('Missing auth token');
+    if (rand < 8) throw new ForbiddenPipeErr('Access denied');
+    if (rand < 9) throw new RouteNotFoundPipeErr(ctx.req.method as any, ctx.req.url || '/error');
+
+    return pipeResponse({
+        status: HTTPStatus.OK,
+        body: { message: 'No error thrown this time' }
+    });
 });
 
 const resp1 = dt.Object({
@@ -150,7 +165,8 @@ app.get('/random-status', { response: dt.Object({ message: dt.String() }) }, asy
     const rand = Math.random() * 10;
 
     if (rand < 3) {
-        return pipeResponse({ status: HTTPStatus.FOUND, headers: { 'Location': 'https://google.com' } });
+        // return pipeResponse({ status: HTTPStatus.FOUND, headers: { 'Location': 'https://google.com' } });
+        return redirect('https://www.google.com');
     }
     if (rand < 8) {
         return pipeResponse({ status: HTTPStatus.BAD_REQUEST, body: { message: 'Bad request' } });

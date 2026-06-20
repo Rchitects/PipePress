@@ -8,14 +8,16 @@ export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
 /*** router types ***/
-export type HTTPMethod =
-    | "GET"
-    | "POST"
-    | "PUT"
-    | "PATCH"
-    | "DELETE"
-    | "OPTIONS"
-    | "HEAD";
+export const HTTPMethod = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+    "HEAD"
+] as const;
+export type HTTPMethod = typeof HTTPMethod[number];
 export type ParamsType = { [key: string]: string | undefined }
 export type PipeContext<Opts extends RouteOptions> = {
     req: IncomingMessage;

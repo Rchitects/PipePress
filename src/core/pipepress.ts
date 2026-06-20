@@ -4,7 +4,7 @@ import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
 import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
-import { DefaultPipeErr, NotFoundPipeErr, PipeError } from "./error";
+import { InternalPipeErr, RouteNotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
 import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
 import inject from "light-my-request";
@@ -304,11 +304,11 @@ export class PipePress extends Router {
                 this._sendResponse(ctx.res, e.toPipeResponse());
             }
             else if (e instanceof Error) {
-                const err = new DefaultPipeErr(e);
+                const err = new InternalPipeErr(e);
                 this._sendResponse(ctx.res, err.toPipeResponse());
             }
             else {
-                const err = new DefaultPipeErr(new Error(e?.toString() || 'Unknown error'));
+                const err = new InternalPipeErr(new Error(e?.toString() || 'Unknown error'));
                 this._sendResponse(ctx.res, err.toPipeResponse());
             }
         }
@@ -353,7 +353,7 @@ export class PipePress extends Router {
             }
             else {
                 /* create default not repsonse by throwing error*/
-                throw new NotFoundPipeErr(req.method as HTTPMethod, req.url || '');
+                throw new RouteNotFoundPipeErr(req.method as HTTPMethod, req.url || '');
             }
         }
         catch (e) {

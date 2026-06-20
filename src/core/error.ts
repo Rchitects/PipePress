@@ -1,35 +1,34 @@
 /*** imports ***/
-import { HTTPMethod } from "find-my-way";
-import { HTTPStatus, PipeResponse, stringyfy } from "./models";
+import { HTTPMethod, HTTPStatus, PipeResponse, stringyfy } from "./models";
 import { DataType } from "./datatypes";
 import fastJSON from "fast-json-stringify";
 import dt from "./datatypes";
 import { pipeResponse } from "./utils";
 
 /*** types for schemas ***/
-type PipeErrBasePayload = {
+type PipeErrPayload = {
     message: string;
 };
-type DefaultPipeErrPayload = PipeErrBasePayload & {
+type DefaultPipeErrPayload = PipeErrPayload & {
     errName: string;
 };
-type BadRequestPipeErrPayload = PipeErrBasePayload;  // TODO: enough?
-type NotFoundPipErrPayload = PipeErrBasePayload & {
-    method: string;
+type BadRequestPipeErrPayload = PipeErrPayload;  // TODO: enough?
+type NotFoundPipErrPayload = PipeErrPayload & {
+    method: HTTPMethod;
     path: string;
 };
-type ContentTooLargePipeErrPayload = PipeErrBasePayload & {
+type ContentTooLargePipeErrPayload = PipeErrPayload & {
     allowed: number;
     sent: number;
 };
-type TooManyReqeuestsPipeErrPayload = PipeErrBasePayload & {
+type TooManyReqeuestsPipeErrPayload = PipeErrPayload & {
     retryAfterMs: number;
     reqeustLimit: number;
     requestCount: number;
 };
 
 /*** schemas for errors ***/
-const BasePipeErrSchema = dt.Object({
+const PipeErrSchema = dt.Object({
     message: dt.String()
 });
 const DefaultPipeErrSchema = dt.Object({
@@ -41,7 +40,7 @@ const BadRequestPipeErrSchema = dt.Object({
 });
 const NotFoundPipErrSchema = dt.Object({
     message: dt.String(),
-    method: dt.String(),
+    method: dt.StringLiteral(...HTTPMethod),
     path: dt.String()
 });
 const ContentTooLargePipeErrSchema = dt.Object({
@@ -58,84 +57,69 @@ const TooManyReqeuestsPipeErrSchema = dt.Object({
 
 /*** main class ***/
 // TODO: unforce user to use message in any error?
-export abstract class PipeError<T extends PipeErrBasePayload> {
-    private _serializer?: stringyfy<T>;
-    static readonly exludedKeys: string[] = ['name', 'status', 'response', '_serializer'];
-    constructor(
-        public name: string,
-        public message: string,
-        public status: HTTPStatus,
-        public response?: DataType<T, boolean>
-    ) {
+export abstract class PipeError<T extends PipeErrPayload> extends Error {
+    status: HTTPStatus;
+    protected payload: T;
+    #serializer?: stringyfy<T>;
+
+    constructor(name: string, status: HTTPStatus, payload: T, schema?: DataType<T, boolean>) {
+        super(payload.message);
+        this.status = status;
+        this.name = name;
+        this.payload = payload;
         /* create serializer */
-        if (response) {
-            this._serializer = fastJSON(response.toJSONSchema() as any);
+        if (schema) {
+            this.#serializer = fastJSON(schema.toJSONSchema() as any);
         }
     }
 
     /*** public function ***/
     public toPipeResponse(): PipeResponse<T> {
-        /* generate body */
-        let clone: T = <T>{};
-        Object.assign(clone, this);
-        // remove unneeded / undefined properties
-        for (const key in clone) {
-            if (clone[key] === undefined) {
-                delete clone[key];
-            }
-            else if (PipeError.exludedKeys.includes(key)) {
-                delete clone[key];
-            }
-        }
-
-        /* return response */
         return pipeResponse({
             status: this.status,
-            body: clone,
-            serializer: this._serializer
+            body: this.payload,
+            serializer: this.#serializer
         });
     }
 }
 /*** pre-defiened errors ***/
-export class DefaultPipeErr extends PipeError<DefaultPipeErrPayload> {
-    public errName: string;
+export class InternalPipeErr extends PipeError<DefaultPipeErrPayload> {
     constructor(err: Error) {
-        super(err.name, err.message, HTTPStatus.INTERNAL_SERVER_ERROR, DefaultPipeErrSchema);
-        this.errName = err.name;
+        super(err.name, HTTPStatus.INTERNAL_SERVER_ERROR, { message: err.message, errName: err.name }, DefaultPipeErrSchema);
     }
 }
 export class BadRequestPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
-        super('BadRequestPipeErr', message, HTTPStatus.BAD_REQUEST, BadRequestPipeErrSchema);
+        super('BadRequestPipeErr', HTTPStatus.BAD_REQUEST, { message }, BadRequestPipeErrSchema);
     }
 }
-export class NotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
-    constructor(public method: HTTPMethod, public path: string, message: string = 'URL not found') {
-        super('NotFoundPipeErr', message, HTTPStatus.NOT_FOUND, NotFoundPipErrSchema);
+export class RouteNotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
+    constructor(method: HTTPMethod, path: string, message: string = 'URL not found') {
+        super('RouteNotFoundPipeErr', HTTPStatus.NOT_FOUND, { message, method, path }, NotFoundPipErrSchema);
     }
 }
 export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
-        super('ValidationPipeErr', message, HTTPStatus.BAD_REQUEST, BadRequestPipeErrSchema)
+        super('ValidationPipeErr', HTTPStatus.BAD_REQUEST, { message }, BadRequestPipeErrSchema)
     }
 }
 export class ContentTooLargePipeErr extends PipeError<ContentTooLargePipeErrPayload> {
-    constructor(public allowed: number, public sent: number) {
-        super('ContentTooLargePipeErr', `Payload is too large`, HTTPStatus.CONTENT_TOO_LARGE, ContentTooLargePipeErrSchema);
+    constructor(allowed: number, sent: number) {
+        super('ContentTooLargePipeErr', HTTPStatus.CONTENT_TOO_LARGE, { message: 'Payload is too large', allowed, sent }, ContentTooLargePipeErrSchema);
     }
 }
 export class TooManyRequestsPipeErr extends PipeError<TooManyReqeuestsPipeErrPayload> {
-    constructor(public retryAfterMs: number, public reqeustLimit: number, public requestCount: number) {
-        super('TooManyRequestsPipeErr', `Too many requests`, HTTPStatus.TOO_MANY_REQUESTS, TooManyReqeuestsPipeErrSchema);
+    constructor(retryAfterMs: number, reqeustLimit: number, requestCount: number) {
+        super('TooManyRequestsPipeErr', HTTPStatus.TOO_MANY_REQUESTS, { message: 'Too many requests', reqeustLimit, requestCount, retryAfterMs }, TooManyReqeuestsPipeErrSchema);
     }
 }
-export class UnauthorizedPipeErr extends PipeError<PipeErrBasePayload> {
+export class UnauthorizedPipeErr extends PipeError<PipeErrPayload> {
     constructor(message: string) {
-        super('UnauthorizedPipeErr', message, HTTPStatus.UNAUTHORIZED, BasePipeErrSchema);
+        super('UnauthorizedPipeErr', HTTPStatus.UNAUTHORIZED, { message }, PipeErrSchema);
     }
 }
-export class ForbiddenPipeErr extends PipeError<PipeErrBasePayload> {
+export class ForbiddenPipeErr extends PipeError<PipeErrPayload> {
     constructor(message: string) {
-        super('ForbiddenPipeErr', message, HTTPStatus.FORBIDDEN, BasePipeErrSchema);
+        super('ForbiddenPipeErr', HTTPStatus.FORBIDDEN, { message }, PipeErrSchema);
     }
 }
