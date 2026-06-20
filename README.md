@@ -77,11 +77,12 @@ Route `options` may include:
 
 ### Built-in pipelines
 Each route pipeline automatically includes:
-1. inherited stages from parent routers
-2. router-level stages
-3. the internal request parser/validator stage
-4. route-level stages
-5. the route handler
+1. pre-parse stages (`runBeforeParse`)
+2. the internal request parser/validator stage
+3. inherited stages from parent routers
+4. router-level stages
+5. route-level stages
+6. the route handler
 
 ## Schema validation
 
@@ -145,6 +146,14 @@ return pipeResponse({
 });
 ```
 
+For simple redirects, use the `redirect()` helper instead:
+
+```ts
+import { redirect } from "@rchitects/pipepress";
+
+return redirect("https://example.com");
+```
+
 Custom non-JSON content types are also supported via the route `contentType` option.
 
 `pipeResponse()` also supports response cookies with `cookies: [{ name, value, ...options }]`:
@@ -177,12 +186,14 @@ clearCookie(ctx.res, 'session');
 ## Error handling
 
 PipePress includes built-in error classes and a default error fallback:
+- `InternalPipeErr`
 - `BadRequestPipeErr`
 - `ValidationPipeErr`
 - `ContentTooLargePipeErr`
 - `TooManyRequestsPipeErr`
-- `NotFoundPipeErr`
-- `DefaultPipeErr`
+- `RouteNotFoundPipeErr`
+- `UnauthorizedPipeErr`
+- `ForbiddenPipeErr`
 
 A custom not-found handler can be registered with `app.setNotFoundHandler(...)`.
 
@@ -199,7 +210,7 @@ This enables `OPTIONS` preflight routes automatically and sets common CORS respo
 ## Built-in stages
 
 ### basicHTTPLogger
-Logs request start / finish events, response status and duration.
+Logs request start / finish events, response status and duration. When used globally, it runs before request parsing so it can capture the raw incoming request.
 
 ### rateLimiter
 Simple in-memory token-bucket rate limiter. Configure the bucket size and refill behaviour using the options shown below.
@@ -244,9 +255,11 @@ See `example/index.ts` for a working demonstration of:
 - request validation
 - nested routers
 - cookie parsing and `Set-Cookie` response support
-- file upload handling
-- custom route stages
+- file upload handling with custom `runBeforeParse` stages
+- custom route stages and pre-parse stage ordering
 - CORS support
+- redirect responses via `redirect()` helper
+- built-in error responses with `InternalPipeErr`, `BadRequestPipeErr`, `ValidationPipeErr`, `ContentTooLargePipeErr`, `TooManyRequestsPipeErr`, `UnauthorizedPipeErr`, `ForbiddenPipeErr`, and `RouteNotFoundPipeErr`
 - custom status and headers via `pipeResponse`
 
 ## Future work
