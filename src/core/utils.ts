@@ -3,18 +3,18 @@ import { IncomingMessage, ServerResponse } from "http";
 import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieEntry, SetCookieOptions, stringyfy } from "./models";
 
 /*** functions ***/
-export const isContentType = (source: HTTPContentType | string, ofType: HTTPContentType): boolean => {
+export function isContentType(source: HTTPContentType | string, ofType: HTTPContentType): boolean {
     return source.toString().includes(ofType);
 }
-export const fastUUID = (time: number = Date.now()) => {
+export function fastUUID(time: number = Date.now()) {
     const tsHex = time.toString(16).padStart(12, "0");
     const randHex = Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, "0");
     return tsHex + randHex; /* always 18 characters long -- 12 from timestamp, 6 from random */
-};
-export const sleep = (ms: number): Promise<void> => {
+}
+export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-export const getIP = (req: IncomingMessage): string => {
+export function getIP(req: IncomingMessage): string {
     const forwardedFor = req.headers['x-forwarded-for'];
 
     if (forwardedFor && typeof forwardedFor === 'string') {
@@ -24,22 +24,28 @@ export const getIP = (req: IncomingMessage): string => {
 
     return req.socket.remoteAddress || 'unknown';
 }
-export const isPipeResponse = (value: unknown): value is PipeResponse => {
+export function isPipeResponse(value: unknown): value is PipeResponse {
     return (
         typeof value === 'object' &&
         value !== null &&
         PIPE_RESPONSE_BRAND in value
     );
 }
-export const pipeResponse = <Body = any>(opts: {
+export function pipeResponse<Body = any>(opts: {
     status: HTTPStatus;
     body?: Body;
     headers?: Record<string, string>;
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
     cookies?: SetCookieEntry[];
-}): PipeResponse<Body> => {
+}): PipeResponse<Body> {
     return { [PIPE_RESPONSE_BRAND]: true, ...opts };
+}
+export function redirect(location: string, status: 301 | 302 | 303 | 307 | 308 = HTTPStatus.FOUND): PipeResponse<undefined> {
+    return pipeResponse({
+        status,
+        headers: { Location: location }
+    });
 }
 
 /**
@@ -48,7 +54,7 @@ export const pipeResponse = <Body = any>(opts: {
 // RFC 6265 + RFC 2616 token: ASCII printable, ohne Separatoren
 const INVALID_COOKIE_NAME = /[^\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5A\x5E-\x7A\x7C\x7E]/;
 
-export const serializeCookie = (name: string, value: string, opts: SetCookieOptions = {}): string => {
+export function serializeCookie(name: string, value: string, opts: SetCookieOptions = {}): string {
     if (!name || INVALID_COOKIE_NAME.test(name)) {
         throw new TypeError(`Invalid cookie name: "${name}"`);
     }
@@ -66,7 +72,7 @@ export const serializeCookie = (name: string, value: string, opts: SetCookieOpti
     return str;
 }
 
-export const setCookie = (res: ServerResponse, name: string, value: string, opts: SetCookieOptions = {}): void => {
+export function setCookie(res: ServerResponse, name: string, value: string, opts: SetCookieOptions = {}): void {
     const serialized = serializeCookie(name, value, opts);
     const existing = res.getHeader('Set-Cookie');
     if (Array.isArray(existing)) {
@@ -77,7 +83,7 @@ export const setCookie = (res: ServerResponse, name: string, value: string, opts
         res.setHeader('Set-Cookie', serialized);
     }
 }
-export const clearCookie = (res: ServerResponse, name: string, opts: Omit<SetCookieOptions, 'maxAge' | 'expires'> = {}): void => {
+export function clearCookie(res: ServerResponse, name: string, opts: Omit<SetCookieOptions, 'maxAge' | 'expires'> = {}): void {
     /* clear a cookie by setting maxAge and expires */
     setCookie(res, name, '', {
         ...opts,
