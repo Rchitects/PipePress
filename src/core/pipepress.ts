@@ -82,9 +82,9 @@ export class PipePress extends Router {
 
         /* create pipline and handler for route and register */
         for (const route of allRoutes) {
-            this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, searchParams) => {
+            this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, _searchParams) => {
                 /* create context for this route */
-                const ctx = this._createContext(req, res, params, searchParams);
+                const ctx = this._createContext(req, res, params);
                 const state = {} as any;
                 /* start executing all stages & handler */
                 try {
@@ -245,7 +245,13 @@ export class PipePress extends Router {
             this._handleNotFound(req, res);
         }
     }
-    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType, query: Record<string, string>): PipeContext<any> {
+    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType): PipeContext<any> {
+        /* create query parameters */
+        let query: Record<string, string> = {};
+        if (req.url) {
+            const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+            query = Object.fromEntries(url.searchParams.entries())
+        }
         /* create context */
         const ctx: PipeContext<any> = {
             req,
@@ -319,7 +325,7 @@ export class PipePress extends Router {
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
         /* create context for this route */
-        const ctx = this._createContext(req, res, {}, {});
+        const ctx = this._createContext(req, res, {});
         const state = {} as any;
         /* start executing all global stages */
         try {
