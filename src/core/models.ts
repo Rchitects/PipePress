@@ -1,12 +1,32 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { DataType, ObjectType, Infer, SchemaDefinition } from "./datatypes";
+import { DataType, ObjectType, Infer, SchemaDefinition, ParsedSchema } from "./datatypes";
 
 /*** definitions ***/
 export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
 
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
+/*** params ***/
+type ExtractParamNames<Path extends string> =
+    Path extends `${string}/:${infer Param}/${infer Rest}`
+    ? Param | ExtractParamNames<`/${Rest}`>
+    : Path extends `${string}/:${infer Param}`
+    ? Param
+    : never;
+type StrictParamsSchema<Path extends string> = {
+    [K in ExtractParamNames<Path>]: DataType<any, false>
+};
+type InferParams<Path extends string, Opts extends RouteOptions<Path>> =
+    ExtractParamNames<Path> extends never
+    ? {}                                                        // no params in path
+    : Opts["params"] extends ObjectType<infer TSchema, any>
+    ? ParsedSchema<TSchema>                                     // params definied with validation
+    : { [K in ExtractParamNames<Path>]: string };               // raw params
+type RouteParams<Path extends string> =
+    [ExtractParamNames<Path>] extends [never]
+    ? never
+    : ObjectType<StrictParamsSchema<Path>, false>;
 /*** router types ***/
 export const HTTPMethod = [
     "GET",
@@ -19,10 +39,10 @@ export const HTTPMethod = [
 ] as const;
 export type HTTPMethod = typeof HTTPMethod[number];
 export type ParamsType = { [key: string]: string | undefined }
-export type PipeContext<Opts extends RouteOptions> = {
+export type PipeContext<Path extends string, Opts extends RouteOptions<Path>> = {
     req: IncomingMessage;
     res: ServerResponse;
-    params: Infer<Opts["params"]>;
+    params: InferParams<Path, Opts>;
     query: Infer<Opts["query"]>;
     body: Infer<Opts['body']>;
     files: InferFiles<Opts["files"]>;
@@ -38,28 +58,28 @@ export type PipeResponse<Body = any> = {
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
 }
-export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Opts extends RouteOptions, State = {}> = (ctx: PipeContext<Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
+export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = {}> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
 export type PipeStage<Res, State = {}> = {
     handler: PipeStageHandler<Res, State>;
     runBeforeParse?: boolean;
     serializer?: stringyfy<Res>;
 }
-export type Route = {
+export type Route<Path extends string> = {
     method: HTTPMethod;
-    path: string;
-    handler: PipeRouteHandler<any, any>;
+    path: Path;
+    handler: PipeRouteHandler<Path, any, any>;
     serializer: stringyfy<any>;
     stages?: PipeStage<any, any>[];
     body?: DataType<any, boolean>;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
-    params?: ObjectType<SchemaDefinition<false>, false>;
+    params?: RouteParams<Path>;
     query?: ObjectType<any, boolean>;
     cookies?: ObjectType<any, boolean>;
 }
-export type RouteOptions = {
-    params?: ObjectType<SchemaDefinition<false>, false>;
+export type RouteOptions<Path extends string> = {
+    params?: RouteParams<Path>,
     query?: ObjectType<any, boolean>;
     body?: DataType<any, boolean>;
     files?: Record<string, FileOption>;
@@ -68,8 +88,6 @@ export type RouteOptions = {
     contentType?: HTTPContentType;
     cookies?: ObjectType<any, boolean>;
 };
-
-
 export type FileUpload = {
     filename: string;
     path: string;

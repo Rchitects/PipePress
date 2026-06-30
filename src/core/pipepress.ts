@@ -245,7 +245,7 @@ export class PipePress extends Router {
             this._handleNotFound(req, res);
         }
     }
-    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType): PipeContext<any> {
+    private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType): PipeContext<any, any> {
         /* create query parameters */
         let query: Record<string, string> = {};
         if (req.url) {
@@ -253,7 +253,7 @@ export class PipePress extends Router {
             query = Object.fromEntries(url.searchParams.entries())
         }
         /* create context */
-        const ctx: PipeContext<any> = {
+        const ctx: PipeContext<any, any> = {
             req,
             res,
             params,
@@ -303,7 +303,7 @@ export class PipePress extends Router {
         }
         res.end(body);
     }
-    private _handleError(e: any, ctx: PipeContext<any>) {
+    private _handleError(e: any, ctx: PipeContext<any, any>) {
         // TODO: add custome error handler?
         try {
             if (e instanceof PipeError) {
@@ -366,7 +366,7 @@ export class PipePress extends Router {
             this._handleError(e, ctx);
         }
     }
-    private _corsStageHandler(ctx: PipeContext<any>, path: string) {
+    private _corsStageHandler(ctx: PipeContext<any, any>, path: string) {
         /* ORIGIN */
         ctx.res.setHeader('Access-Control-Allow-Origin', '*');  // TODO: make configurable
         /* METHODS */

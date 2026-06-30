@@ -63,9 +63,6 @@ const dataBody = dt.Object({
 app.post('/data/:id', { body: dataBody, params: dt.Object({ id: dt.String() }) }, async (ctx) => {
     return { status: 'IO', message: 'Created', ...ctx.body };
 });
-app.get('/data/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx) => {
-    return { id: ctx.params.id };
-});
 app.post('/ping', async (ctx) => {
     return { ...(ctx.body || {}) };
 });
@@ -183,6 +180,17 @@ app.get('/cookies', {
     console.log(ctx.rawCookies);
     setCookie(ctx.res, 'Name', ctx.query.name, { maxAge: 100_000 });
     return { message: `Hallo ${ctx.query.name}! You are ${ctx.cookies.age}` };
+});
+
+/* params */
+app.get('/params/none/:name', async (ctx) => {
+    return { ...ctx.params };
+});
+app.get('/params/one/:id', { params: dt.Object({ id: dt.Number() }) }, async (ctx) => {
+    return { ...ctx.params };
+});
+app.get('/params/:id/multi/:name', { params: dt.Object({ id: dt.Number(), name: dt.String() }) }, async (ctx) => {
+    return { ...ctx.params };
 });
 
 /* create routes */
