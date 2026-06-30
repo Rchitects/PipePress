@@ -3,7 +3,7 @@ import { JSONSchema7 } from "json-schema";
 
 /*** types ***/
 export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<any, Optional>>;
-type ParsedSchema<T extends SchemaDefinition> =
+export type ParsedSchema<T extends SchemaDefinition> =
     { [K in keyof T as T[K] extends DataType<any, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
     { [K in keyof T as T[K] extends DataType<any, true> ? never : K]: ReturnType<T[K]["validate"]> };
 export type Infer<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
