@@ -251,16 +251,33 @@ Current benchmark results from the repository:
 
 ## Example project
 
-See `example/index.ts` for a working demonstration of:
-- request validation
-- nested routers
-- cookie parsing and `Set-Cookie` response support
-- file upload handling with custom `runBeforeParse` stages
-- custom route stages and pre-parse stage ordering
-- CORS support
-- redirect responses via `redirect()` helper
+The demo app in `example/index.ts` is a compact showcase of PipePress in action. It starts a small server on port `4000` and exercises many of the framework's core capabilities in one place:
+
+- request validation for params, query strings, JSON bodies and cookies
+- nested routers with shared stage state
+- multipart file uploads with custom `runBeforeParse` and regular stages
+- cookie parsing plus `Set-Cookie` and `clearCookie()` responses
+- redirects, binary responses and custom status/headers via `pipeResponse()`
 - built-in error responses with `InternalPipeErr`, `BadRequestPipeErr`, `ValidationPipeErr`, `ContentTooLargePipeErr`, `TooManyRequestsPipeErr`, `UnauthorizedPipeErr`, `ForbiddenPipeErr`, and `RouteNotFoundPipeErr`
-- custom status and headers via `pipeResponse`
+- CORS preflight support and a custom not-found handler
+- an injected smoke test via `app.inject()` before the server is started
+
+Run it with:
+
+```bash
+npm run run:example
+```
+
+Useful demo endpoints include:
+- `/health`
+- `/greet/:name`
+- `/search?term=pipe&page=2`
+- `/validated`
+- `/upload`
+- `/cookies`
+- `/redirect`
+- `/errors/:type`
+- `/accounts/:id`
 
 ## Future work
 

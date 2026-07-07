@@ -1,219 +1,261 @@
 /*** imports (compiled) ***/
-import { BadRequestPipeErr, basicHTTPLogger, HTTPStatus, InternalPipeErr, PipePress, pipeResponse, rateLimiter, redirect, RouteNotFoundPipeErr, ValidationPipeErr, ContentTooLargePipeErr, TooManyRequestsPipeErr, UnauthorizedPipeErr, ForbiddenPipeErr, Router, setCookie } from "../dist";
-import dt, { Infer } from "../dist/core/datatypes";
+import {
+    BadRequestPipeErr,
+    basicHTTPLogger,
+    ContentTooLargePipeErr,
+    ForbiddenPipeErr,
+    HTTPStatus,
+    InternalPipeErr,
+    PipePress,
+    pipeResponse,
+    rateLimiter,
+    redirect,
+    RouteNotFoundPipeErr,
+    Router,
+    setCookie,
+    clearCookie,
+    TooManyRequestsPipeErr,
+    UnauthorizedPipeErr,
+    ValidationPipeErr,
+} from "../dist";
+import dt from "../dist/core/datatypes";
 
-/*** pre-defined stages ***/
-/*** router ***/
-/*** pipepress ***/
-const app = new PipePress({
-    // maxBodyLength: 100,
-    cors: {
-        preflight: 'auto'
-    }
-});
-
-/* global stages */
-app.use(basicHTTPLogger());
-app.use(rateLimiter());
-
-/* not found handler */
-// app.setNotFoundHandler<{ message: string }>(async (ctx) => {
-//     return {
-//         status: 404,
-//         body: { message: `The requested resource ${ctx.req.url} was not found` }
-//     };
-// }, dt.Object({ message: dt.String() }));
-
-/* routes */
-app.get('/error', async (ctx) => {
-    const rand = Math.random() * 12;
-
-    if (rand < 1) throw new Error('WTF IS THIS');
-    if (rand < 2) throw new InternalPipeErr(new Error('INTRA LAN'));
-    if (rand < 3) throw new BadRequestPipeErr('This request is bad');
-    if (rand < 4) throw new ValidationPipeErr('Validation failed for demo');
-    if (rand < 5) throw new ContentTooLargePipeErr(1024, 2048);
-    if (rand < 6) throw new TooManyRequestsPipeErr(5000, 10, 11);
-    if (rand < 7) throw new UnauthorizedPipeErr('Missing auth token');
-    if (rand < 8) throw new ForbiddenPipeErr('Access denied');
-    if (rand < 9) throw new RouteNotFoundPipeErr(ctx.req.method as any, ctx.req.url || '/error');
-
-    return pipeResponse({
-        status: HTTPStatus.OK,
-        body: { message: 'No error thrown this time' }
-    });
-});
-
-const resp1 = dt.Object({
-    name: dt.String(),
-    age: dt.Number(),
-    birth: dt.Date().isOptional()
-});
-app.get('/birth', { response: resp1 }, async (ctx) => {
-    return {
-        age: 123,
-        name: "John Doe"
-    }
-});
-
-const dataBody = dt.Object({
-    name: dt.String(),
-    age: dt.Number().isOptional()
-});
-app.post('/data/:id', { body: dataBody, params: dt.Object({ id: dt.String() }) }, async (ctx) => {
-    return { status: 'IO', message: 'Created', ...ctx.body };
-});
-app.post('/ping', async (ctx) => {
-    return { ...(ctx.body || {}) };
-});
-
-/* router */
-const router = new Router();
-type Test = { test: string };
-router.use({
-    handler: async (ctx, state: Test) => {
-        console.log('All user routes use this stage');
-        state.test = 'Hello wordld';
-    }
-});
-router.get('/:id', { params: dt.Object({ id: dt.String() }) }, async (ctx, state: Test) => {
-    console.log('Get user with id ', ctx.params.id);
-    console.log('Test value from higher stage:', state.test);
-    return { name: 'Johnny', id: ctx.params.id, created: new Date() };
-});
-router.get('/all', {
-    stages: [{
-        handler: async (ctx) => { console.log('Get all users private stage') }
-    }]
-}, async (ctx) => {
-    return {
-        users: [
-            { name: 'Johnny', id: '1', created: new Date() },
-            { name: 'Bob', id: '2', created: new Date() }
-        ]
-    };
-});
-app.mount('/user', router);
-
-/* custome conten type */
-app.get('/image', { contentType: 'image/gif' }, async (ctx) => {
-    const imgBuffer = Buffer.from([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
-    ]);
-    return imgBuffer;
-});
-
-/* crazy logger */
-const loggi = (msg: string) => {
-    console.log(`[CRAZY] ${msg}`);
-};
-app.get('/crazy-log', { stages: [basicHTTPLogger(loggi)] }, async (ctx) => { });
-
-/* long route */
-app.get('/slow', async (ctx) => {
-    await new Promise((res) => setTimeout(res, 10000));
-    return { status: 'OK', message: 'That was slow!' };
-});
-
-/* file upload */
-app.post('/file-upload', {
-    // files: {
-    //     uno: { required: true },
-    //     duo: { required: false }
-    // },
-    body: dt.Object({
-        name: dt.String(),
-        age: dt.Number().isOptional()
-    }),
-    stages: [
-        { handler: (ctx) => console.log('Pefore parse', Date.now()), runBeforeParse: true },
-        { handler: (ctx) => console.log('After parse', Date.now()) }
-    ]
-}, async (ctx) => {
-    console.log('Files');
-    console.log(ctx.files);
-    // if (!ctx.files.uno) {
-    //     console.log('No files uploaded');
-    // }
-    // else {
-    //     console.log('Uno files Len', ctx.files.uno.length);
-    //     console.log('File content');
-    //     for (const file of ctx.files.uno) {
-    //         console.log(file.filename, file.path);
-    //     }
-    // }
-    if (ctx.body) {
-        console.log('Body');
-        console.log(ctx.body);
-    }
-    else {
-        console.log('No Body');
-    }
-    console.log('Sleep for 1 sek');
-    await new Promise((res, rej) => setTimeout(res, 1000));
-    return {
-        message: "Thanks Mr"
-    };
-});
-
-/* random status */
-app.get('/random-status', { response: dt.Object({ message: dt.String() }) }, async (ctx) => {
-
-    const rand = Math.random() * 10;
-
-    if (rand < 3) {
-        // return pipeResponse({ status: HTTPStatus.FOUND, headers: { 'Location': 'https://google.com' } });
-        return redirect('https://www.google.com');
-    }
-    if (rand < 8) {
-        return pipeResponse({ status: HTTPStatus.BAD_REQUEST, body: { message: 'Bad request' } });
-    }
-
-    return { message: 'Random status worked' };
-});
-
-/* cookies */
-app.get('/cookies', {
-    query: dt.Object({ name: dt.String() }),
-    cookies: dt.Object({ age: dt.Number() })
-}, async (ctx) => {
-    console.log(ctx.rawCookies);
-    setCookie(ctx.res, 'Name', ctx.query.name, { maxAge: 100_000 });
-    return { message: `Hallo ${ctx.query.name}! You are ${ctx.cookies.age}` };
-});
-
-/* params */
-app.get('/params/none/:name', async (ctx) => {
-    return { ...ctx.params };
-});
-app.get('/params/one/:id', { params: dt.Object({ id: dt.Number() }) }, async (ctx) => {
-    return { ...ctx.params };
-});
-app.get('/params/:id/multi/:name', { params: dt.Object({ id: dt.Number(), name: dt.String() }) }, async (ctx) => {
-    return { ...ctx.params };
-});
-
-/* create routes */
-app.build();
-
-console.log(app.prittyPrintRoutes());
-
-/* start server */
-app.listen(4000)
-    .then(() => {
-        console.log('Running');
-    })
-    .catch((err) => {
-        console.error(err);
-        process.exit(1);
+function createDemoApp() {
+    const app = new PipePress({
+        cors: { preflight: 'auto' },
+        maxBodyLength: 1_000_000,
     });
 
+    app.use(basicHTTPLogger());
+    app.use(rateLimiter({ maxTokens: 20, refillAmount: 1, refillIntervalMs: 1000 }));
+    app.use({
+        handler: async (ctx) => {
+            ctx.res.setHeader('x-pipepress-demo', 'active');
+        },
+    });
 
-process.on('SIGTERM', async () => {
-    await app.close();
-    process.exit(0);
-});
-process.on('SIGINT', async () => {
-    await app.close();
-    process.exit(0);
+    app.get('/health', async () => ({
+        ok: true,
+        message: 'PipePress is up',
+        features: [
+            'global stages',
+            'schema validation',
+            'cookies',
+            'redirects',
+            'file uploads',
+            'custom errors',
+            'app.inject()',
+        ],
+    }));
+
+    app.get('/greet/:name', {
+        params: dt.Object({ name: dt.String() }),
+        response: dt.Object({
+            greeting: dt.String(),
+            name: dt.String(),
+        }),
+    }, async (ctx) => {
+        return {
+            greeting: `Hello ${ctx.params.name}!`,
+            name: ctx.params.name,
+        };
+    });
+
+    app.get('/search', {
+        query: dt.Object({
+            term: dt.String(),
+            page: dt.Number().isOptional(),
+        }),
+    }, async (ctx) => {
+        return {
+            term: ctx.query.term,
+            page: ctx.query.page ?? 1,
+            message: 'Query validation and parsing worked',
+        };
+    });
+
+    app.post('/validated', {
+        body: dt.Object({
+            name: dt.String(),
+            age: dt.Number().isOptional(),
+            role: dt.StringLiteral('admin', 'member').isOptional(),
+        }),
+        response: dt.Object({
+            created: dt.Boolean(),
+            payload: dt.Object({
+                name: dt.String(),
+                age: dt.Number().isOptional(),
+                role: dt.StringLiteral('admin', 'member').isOptional(),
+            }),
+        }),
+    }, async (ctx) => {
+        return {
+            created: true,
+            payload: ctx.body,
+        };
+    });
+
+    app.post('/upload', {
+        files: {
+            avatar: { required: true },
+        },
+        body: dt.Object({
+            caption: dt.String().isOptional(),
+        }),
+        stages: [
+            {
+                handler: async (ctx) => {
+                    console.log(`[demo] pre-parse stage for ${ctx.req.method} ${ctx.req.url}`);
+                },
+                runBeforeParse: true,
+            },
+            {
+                handler: async (ctx) => {
+                    console.log(`[demo] post-parse stage saw ${ctx.body ? 'body' : 'no body'}`);
+                },
+            },
+        ],
+    }, async (ctx) => {
+        return {
+            message: 'Upload received',
+            body: ctx.body,
+            files: ctx.files?.avatar?.map((file) => ({
+                filename: file.filename,
+                size: file.size,
+                mimeType: file.mimeType,
+            })),
+        };
+    });
+
+    app.get('/cookies', {
+        cookies: dt.Object({
+            theme: dt.StringLiteral('dark', 'light').isOptional(),
+        }),
+    }, async (ctx) => {
+        setCookie(ctx.res, 'demo', 'pipepress', { httpOnly: true, sameSite: 'Lax' });
+        clearCookie(ctx.res, 'old-session');
+
+        return {
+            message: 'Cookies handled',
+            receivedTheme: ctx.cookies?.theme ?? 'default',
+            rawCookies: ctx.rawCookies,
+        };
+    });
+
+    app.get('/redirect', async () => {
+        return redirect('https://example.com');
+    });
+
+    app.get('/custom-response', async () => {
+        return pipeResponse({
+            status: HTTPStatus.CREATED,
+            headers: { 'x-demo': 'custom-response' },
+            cookies: [{ name: 'flash', value: 'done', httpOnly: true, path: '/' }],
+            body: {
+                message: 'Custom response with headers and cookies',
+            },
+        });
+    });
+
+    app.get('/binary', { contentType: 'image/gif' }, async () => {
+        return Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    });
+
+    app.get('/errors/:type', {
+        params: dt.Object({
+            type: dt.StringLiteral('bad', 'validation', 'too-large', 'rate-limit', 'auth', 'forbidden', 'not-found'),
+        }),
+    }, async (ctx) => {
+        switch (ctx.params.type) {
+            case 'bad':
+                throw new BadRequestPipeErr('This is a deliberate BadRequestPipeErr');
+            case 'validation':
+                throw new ValidationPipeErr('This is a deliberate ValidationPipeErr');
+            case 'too-large':
+                throw new ContentTooLargePipeErr(1024, 2048);
+            case 'rate-limit':
+                throw new TooManyRequestsPipeErr(1000, 5, 6);
+            case 'auth':
+                throw new UnauthorizedPipeErr('Missing token');
+            case 'forbidden':
+                throw new ForbiddenPipeErr('Access denied');
+            case 'not-found':
+                throw new RouteNotFoundPipeErr(ctx.req.method as any, ctx.req.url || '/errors/not-found');
+            default:
+                throw new InternalPipeErr(new Error('Unexpected demo path'));
+        }
+    });
+
+    type AccountState = { scope: string; requestPath: string };
+    const accounts = new Router<AccountState>();
+    accounts.use({
+        handler: async (ctx, state) => {
+            state.scope = 'accounts';
+            state.requestPath = ctx.req.url || '/';
+        },
+    });
+    accounts.get('/:id', {
+        params: dt.Object({ id: dt.String() }),
+        response: dt.Object({
+            scope: dt.String(),
+            requestPath: dt.String(),
+            id: dt.String(),
+        }),
+    }, async (ctx, state) => {
+        return {
+            scope: state.scope,
+            requestPath: state.requestPath,
+            id: ctx.params.id,
+        };
+    });
+    app.mount('/accounts', accounts);
+
+    app.setNotFoundHandler<{ message: string; path: string }>(async (ctx) => {
+        return pipeResponse({
+            status: HTTPStatus.NOT_FOUND,
+            body: {
+                message: 'The requested resource was not found',
+                path: ctx.req.url || '/',
+            },
+        });
+    }, dt.Object({
+        message: dt.String(),
+        path: dt.String(),
+    }));
+
+    return app;
+}
+
+async function main() {
+    const app = createDemoApp();
+    app.build();
+
+    console.log('PipePress demo routes:');
+    console.log(app.prittyPrintRoutes());
+
+    const smoke = await app.inject({
+        method: 'GET',
+        url: '/health',
+    });
+
+    console.log('Injected smoke test status:', smoke.statusCode);
+    console.log('Injected smoke test body:', smoke.json());
+
+    await app.listen(4000);
+    console.log('Demo server listening on http://localhost:4000');
+
+    process.on('SIGINT', async () => {
+        await app.close();
+        process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+        await app.close();
+        process.exit(0);
+    });
+}
+
+main().catch((err) => {
+    console.error(err);
+    process.exit(1);
 });

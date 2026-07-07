@@ -24,7 +24,7 @@ const DEFAULT_CORS_CONFIG: Required<PipeCORSConfig> = {
 }
 
 /*** class ***/
-export class PipePress extends Router {
+export class PipePress<GlobalState = {}> extends Router<GlobalState> {
     /*** varbs ***/
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
