@@ -27,6 +27,17 @@ type RouteParams<Path extends string> =
     [ExtractParamNames<Path>] extends [never]
     ? never
     : ObjectType<StrictParamsSchema<Path>, false>;
+
+/*** state ***/
+type StageState<S> = S extends PipeStage<any, infer State> ? State : {};
+type StateFromStages<T extends readonly PipeStage<any, any>[]> =
+    T extends readonly [infer Head extends PipeStage<any, any>, ...infer Tail extends PipeStage<any, any>[]]
+    ? StageState<Head> & StateFromStages<Tail>
+    : {};
+export type InferStateFromOpts<Opts> =
+    Opts extends { stages: infer S extends readonly PipeStage<any, any>[] }
+    ? StateFromStages<S>
+    : {};
 /*** router types ***/
 export const HTTPMethod = [
     "GET",
@@ -78,13 +89,16 @@ export type Route<Path extends string> = {
     query?: ObjectType<any, boolean>;
     cookies?: ObjectType<any, boolean>;
 }
-export type RouteOptions<Path extends string> = {
+export type RouteOptions<
+    Path extends string,
+    Stages extends readonly PipeStage<any, any>[] = PipeStage<any, any>[]
+> = {
     params?: RouteParams<Path>,
     query?: ObjectType<any, boolean>;
     body?: DataType<any, boolean>;
     files?: Record<string, FileOption>;
     response?: DataType<any, boolean>;
-    stages?: PipeStage<any, any>[];
+    stages?: Stages;
     contentType?: HTTPContentType;
     cookies?: ObjectType<any, boolean>;
 };

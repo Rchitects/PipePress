@@ -19,7 +19,7 @@ const DEFAULT_OPTS: Required<RequestParserOptions> = {
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
 /*** functions ***/
-async function parseMultiPartBody(ctx: PipeContext<any>, route: Route) {
+async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>) {
     return new Promise<{ fields: Record<string, string>, files: Record<string, FileUpload[]> }>((resolve, reject) => {
         /* create busboy instance */
         const busbuy = Busboy({ headers: ctx.req.headers });
@@ -112,7 +112,7 @@ function normalizeQuery(query: Record<string, string>): Record<string, string | 
 
     return res;
 }
-function parseCookies(ctx: PipeContext<any>): Record<string, string> {
+function parseCookies(ctx: PipeContext<any, any>): Record<string, string> {
     const header = ctx.req.headers.cookie;
     if (!header) return {};
 
@@ -135,7 +135,7 @@ function parseCookies(ctx: PipeContext<any>): Record<string, string> {
 }
 
 /*** body-parser stage ***/
-export const parseAndValidateRequestStage = (route: Route, options: RequestParserOptions): PipeStage<void> => {
+export const parseAndValidateRequestStage = (route: Route<any>, options: RequestParserOptions): PipeStage<void> => {
     const opts = { ...DEFAULT_OPTS, ...options };
     return {
         handler: async (ctx) => {
@@ -245,26 +245,26 @@ export const parseAndValidateRequestStage = (route: Route, options: RequestParse
                 }
                 if (!size) {
                     ctx.body = undefined;
-                    return;
                 }
+                else {
+                    /* parse data */
+                    const rawData = Buffer.concat(chunks);
 
-                /* parse data */
-                const rawData = Buffer.concat(chunks);
-
-                try {
-                    if (isContentType(contentType, 'application/json')) {
-                        ctx.body = JSON.parse(rawData.toString('utf-8'));
+                    try {
+                        if (isContentType(contentType, 'application/json')) {
+                            ctx.body = JSON.parse(rawData.toString('utf-8'));
+                        }
+                        else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
+                            ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
+                        }
+                        else {
+                            validateBody = false;
+                            ctx.body = rawData;
+                        }
                     }
-                    else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
-                        ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
+                    catch (e) {
+                        throw new BadRequestPipeErr('Could not parse request body.');
                     }
-                    else {
-                        validateBody = false;
-                        ctx.body = rawData;
-                    }
-                }
-                catch (e) {
-                    throw new BadRequestPipeErr('Could not parse request body.');
                 }
             }
 

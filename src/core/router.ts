@@ -1,7 +1,7 @@
 /*** imports ***/
 import fastJSON from "fast-json-stringify";
 import { parseAndValidateRequestStage } from "../stages/requestParser";
-import type { HTTPMethod, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
+import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -9,7 +9,7 @@ const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
 }
 
 /*** class ***/
-export class Router {
+export class Router<GlobalState = {}> {
     /*** variables ***/
     protected _stages: PipeStage<any, any>[] = [];
     protected _routes: Route<any>[] = [];
@@ -46,7 +46,7 @@ export class Router {
     /*** public functions ***/
     // TODO: Typesafety
     // TODO: Improve stages defintion
-    use<Res, State = {}>(stage: PipeStage<Res, State>): Router {
+    use<Res, State>(stage: PipeStage<Res, GlobalState & State>): Router<GlobalState & State> {
         this._stages.push(stage);
         return this;
     }
@@ -101,36 +101,65 @@ export class Router {
 
 
     /*** public HTTP functions ***/
-    get<Path extends string, State = {}>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
-    get<Path extends string, State = {}, Opts extends RouteOptions<Path> = RouteOptions<Path>>(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
+    // GET
+    get<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
+    get<
+        Path extends string,
+        const Opts extends RouteOptions<Path>,
+        State = GlobalState & InferStateFromOpts<Opts>,
+    >(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
     get(path: string, optionsOrHandler: RouteOptions<any> | PipeRouteHandler<any, any, any>, handler?: PipeRouteHandler<any, any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('GET', path, opts, hand!);
     }
-    post<Path extends string, State = {}>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
-    post<Path extends string, State = {}, Opts extends RouteOptions<Path> = RouteOptions<Path>>(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
+
+    // POST
+    post<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
+    post<
+        Path extends string,
+        const Opts extends RouteOptions<Path>,
+        State = GlobalState & InferStateFromOpts<Opts>,
+    >(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
     post(path: string, optionsOrHandler: RouteOptions<any> | PipeRouteHandler<any, any, any>, handler?: PipeRouteHandler<any, any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('POST', path, opts, hand!);
     }
-    put<Path extends string, State = {}>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
-    put<Path extends string, State = {}, Opts extends RouteOptions<Path> = RouteOptions<Path>>(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
+
+    // PUT
+    put<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
+    put<
+        Path extends string,
+        const Opts extends RouteOptions<Path>,
+        State = GlobalState & InferStateFromOpts<Opts>,
+    >(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
     put(path: string, optionsOrHandler: RouteOptions<any> | PipeRouteHandler<any, any, any>, handler?: PipeRouteHandler<any, any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PUT', path, opts, hand!);
     }
-    patch<Path extends string, State = {}>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
-    patch<Path extends string, State = {}, Opts extends RouteOptions<Path> = RouteOptions<Path>>(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
+    
+    // PATCH
+    patch<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
+    patch<
+        Path extends string,
+        const Opts extends RouteOptions<Path>,
+        State = GlobalState & InferStateFromOpts<Opts>,
+    >(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
     patch(path: string, optionsOrHandler: RouteOptions<any> | PipeRouteHandler<any, any, any>, handler?: PipeRouteHandler<any, any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PATCH', path, opts, hand!);
     }
-    delete<Path extends string, State = {}>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
-    delete<Path extends string, State = {}, Opts extends RouteOptions<Path> = RouteOptions<Path>>(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
+
+    // DELETE
+    delete<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
+    delete<
+        Path extends string,
+        const Opts extends RouteOptions<Path>,
+        State = GlobalState & InferStateFromOpts<Opts>,
+    >(path: Path, options: Opts, handler: PipeRouteHandler<Path, Opts, State>): void;
     delete(path: string, optionsOrHandler: RouteOptions<any> | PipeRouteHandler<any, any, any>, handler?: PipeRouteHandler<any, any, any>) {
         const opts = typeof optionsOrHandler === 'function' ? {} : optionsOrHandler;
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
