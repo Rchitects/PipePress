@@ -223,6 +223,7 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
 
                     if (route.body) {
                         ctx.body = fields;
+                        ctx.rawBody = '';
                     }
                     else {
                         /* make sure body is not validated & undefined */
@@ -251,11 +252,12 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
                     const rawData = Buffer.concat(chunks);
 
                     try {
+                        ctx.rawBody = rawData.toString('utf-8');
                         if (isContentType(contentType, 'application/json')) {
-                            ctx.body = JSON.parse(rawData.toString('utf-8'));
+                            ctx.body = JSON.parse(ctx.rawBody);
                         }
                         else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
-                            ctx.body = Object.fromEntries(new URLSearchParams(rawData.toString('utf-8')));
+                            ctx.body = Object.fromEntries(new URLSearchParams(ctx.rawBody));
                         }
                         else {
                             validateBody = false;

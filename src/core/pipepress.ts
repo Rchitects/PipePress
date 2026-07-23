@@ -258,10 +258,11 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
             res,
             params,
             query,
-            rawCookies: {},
             body: undefined,
             files: undefined,
-            cookies: undefined
+            cookies: undefined,
+            rawCookies: {},
+            rawBody: undefined
         };
         return ctx;
     }
