@@ -7,6 +7,7 @@ export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
 
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
+export type StringIfDefined<T> = T extends undefined ? undefined : string;
 /*** params ***/
 type ExtractParamNames<Path extends string> =
     Path extends `${string}/:${infer Param}/${infer Rest}`
@@ -57,8 +58,9 @@ export type PipeContext<Path extends string, Opts extends RouteOptions<Path>> = 
     query: Infer<Opts["query"]>;
     body: Infer<Opts['body']>;
     files: InferFiles<Opts["files"]>;
-    rawCookies: Record<string, string>;
     cookies: InferCookies<Opts["cookies"]>;
+    rawCookies: Record<string, string>;
+    rawBody: StringIfDefined<Opts["body"]>;
 }
 export type PipeResponse<Body = any> = {
     [PIPE_RESPONSE_BRAND]: true,
