@@ -2,6 +2,8 @@
 
 PipePress is a high-performance, Express-inspired Node.js web framework that replaces traditional middleware call stacks with precompiled request pipelines. It is designed for fast routing, modular stage composition, schema-based validation, and compact response serialization.
 
+[![CI](https://github.com/Rchitects/PipePress/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Rchitects/PipePress/actions/workflows/ci.yml)
+
 ## Highlights
 - ⚡ Precompiled route pipelines for minimal dispatch overhead
 - 🧱 Composable stages: global, router-level, route-level

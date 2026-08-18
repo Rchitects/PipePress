@@ -6,7 +6,7 @@ import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
 import { InternalPipeErr, RouteNotFoundPipeErr, PipeError } from "./error";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
+import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
 import inject from "light-my-request";
 import { isPipeResponse, pipeResponse, setCookie } from "./utils";
 
@@ -24,7 +24,7 @@ const DEFAULT_CORS_CONFIG: Required<PipeCORSConfig> = {
 }
 
 /*** class ***/
-export class PipePress<GlobalState = {}> extends Router<GlobalState> {
+export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEvents> {
     /*** varbs ***/
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
@@ -139,7 +139,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
                                     import('fs').then(fs => {
                                         fs.unlink(file.path, (err) => {
                                             if (err) {
-                                                console.error(`Could not delete temp file: ${file.path}`);  // TODO: how to handle this properly?
+                                                this.emit('error', err);
                                             }
                                         });
                                     });
@@ -159,10 +159,14 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
             if (!this._build) reject(new Error('build() was not called'));
             if (this._server) reject(new Error('server is already running'));
 
+            /* create server and setup handler */
             this._server = http.createServer((req, res) => {
                 this._handleRequest(req, res);
             });
-
+            this._server.on('error', (err) => {
+                this.emit('sock:error', err);
+            });
+            /* start server */
             this._server.listen(port, () => {
                 resolve();
             });
@@ -333,7 +337,12 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
         }
         catch (e) {
             /* double failer -> make it clear for logging or somehting like this */
-            console.log(e); // TODO:
+            if (e instanceof Error) {
+                this.emit('error', e);
+            }
+            else {
+                this.emit('error', new Error(`${e}`));
+            }
         }
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -343,7 +352,6 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
         /* start executing all global stages */
         try {
             /* stages */
-
             for (const stage of this._stages) {
                 const stageRes = await stage.handler(ctx, state);
 

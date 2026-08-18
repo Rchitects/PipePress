@@ -2,6 +2,7 @@
 import fastJSON from "fast-json-stringify";
 import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser";
 import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
+import { EventMap, Notifier } from "./eventNotifier";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -9,7 +10,7 @@ const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
 }
 
 /*** class ***/
-export class Router<GlobalState = {}> {
+export class Router<GlobalState = {}, Events extends EventMap = {}> extends Notifier<Events> {
     /*** variables ***/
     protected _stages: PipeStage<any, any>[] = [];
     protected _routes: Route<any>[] = [];
@@ -17,6 +18,7 @@ export class Router<GlobalState = {}> {
     protected _routerConfig: Required<PipeRouterConfig>;
 
     constructor(config: PipeRouterConfig = {}) {
+        super();
         this._routerConfig = { ...DEFAULT_ROUTER_CONFIG, ...config };
     }
 
