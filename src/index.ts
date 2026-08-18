@@ -6,3 +6,4 @@ export * from "./core/error";
 export { basicHTTPLogger } from "./stages/basicHTTPLogger";
 export { rateLimiter } from "./stages/rateLimiter";
 export { pipeResponse, setCookie, clearCookie, redirect } from "./core/utils";
+export * from "./core/eventNotifier";
