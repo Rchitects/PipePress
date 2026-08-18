@@ -2,8 +2,9 @@
 import Busboy from "busboy";
 import { createWriteStream } from "node:fs";
 import os from "node:os";
+import Stream from "node:stream";
 import path from "path";
-import { BadRequestPipeErr, ContentTooLargePipeErr, ValidationPipeErr } from "../core/error";
+import { BadRequestPipeErr, ContentTooLargePipeErr, InternalPipeErr, PipeError, ValidationPipeErr } from "../core/error";
 import { FileUpload, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
 import { fastUUID, isContentType } from "../core/utils";
 
@@ -13,32 +14,144 @@ type RequestParserOptions = {
 };
 
 /*** definitions ***/
+export const BODY_LIMIT_DEFAULT = 1024 * 1024;  // 1MB
 const DEFAULT_OPTS: Required<RequestParserOptions> = {
-    bodyLimit: 0
+    bodyLimit: BODY_LIMIT_DEFAULT
 }
 const ALLOWED_BODY_METHODS: HTTPMethod[] = ['POST', 'PUT', 'PATCH'];
 
-/*** functions ***/
-async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>) {
-    return new Promise<{ fields: Record<string, string>, files: Record<string, FileUpload[]> }>((resolve, reject) => {
-        /* create busboy instance */
-        const busbuy = Busboy({ headers: ctx.req.headers });
+/*** guard class */
+class ByteLimitGuard extends Stream.Transform {
+    #received: number = 0;
+    #limit: number;
 
-        /* storage for files & fields */
+    constructor(bytesLimit: number) {
+        super();
+        this.#limit = bytesLimit;
+    }
+
+    _transform(chunk: Buffer, encoding: BufferEncoding, callback: Stream.TransformCallback): void {
+        this.#received += chunk.length;
+
+        if (this.#received > this.#limit) {
+            callback(new ContentTooLargePipeErr(this.#limit, this.#received));
+            return;
+        }
+
+        callback(null, chunk);
+    }
+}
+
+/*** functions ***/
+async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>, bodyLimit: number) {
+    return new Promise<{ fields: Record<string, string>, files: Record<string, FileUpload[]> }>((resolve, reject) => {
+        /* variables */
         const fields: Record<string, string> = {};
         const files: Record<string, FileUpload[]> = {};
+        const pendingFileWrites: Promise<void>[] = [];
+        // activeWrites will be cleaned if a writestream finishes itself
+        const activeWrites = new Set<{ fileStream: Stream.Readable, writeStream: Stream.Writable }>();
+        let settled = false;
+        const byteGuard = new ByteLimitGuard(bodyLimit);
 
-        /* setup event handler */
-        busbuy.on("file", (name, file, info) => {
-            // TODO: check for max size
-            // TODO: check for max amount
+        /* create busboy instance */
+        const bb = Busboy({ headers: ctx.req.headers });
+
+        /* functions */
+        // unpipeing
+        function unpipeAll(): void {
+            byteGuard.unpipe(bb);
+            ctx.req.unpipe(byteGuard);
+        }
+
+        // cleanup on success
+        function cleanupSuccess(): void {
+            unpipeAll();
+            byteGuard.removeAllListeners();
+            byteGuard.destroy();
+            bb.destroy();
+            // we dont remove BB listerns to avoid the internal error emitter to be emitted into "uncaught" exepections area
+        }
+
+        // cleanup on error
+        function cleanupError(): void {
+            unpipeAll();
+
+            // pause the incoming req. stream to create backpressure (incoming TCP stream will be limited by OS) and avoid unintended memory/CPU usage
+            ctx.req.pause();
+
+            byteGuard.removeAllListeners();
+            byteGuard.destroy();
+
+            // bb will not destroyed here, because there might be open / unfished filestreams, which needs to be finished before destryosing it
+            // we dont remove BB listerns to avoid the internal error emitter to be emitted into "uncaught" exepections area
+        }
+
+        // abort current active write streams
+        function abortActiveWrites(): void {
+            for (const entry of activeWrites) {
+                const { fileStream, writeStream } = entry;
+                fileStream.unpipe(writeStream);
+                // 'error' listeners are still present but wont trigger abort cause of settled flag
+                writeStream.destroy();
+                fileStream.destroy();
+            }
+        }
+
+        // abort and reject the parsing
+        const settleReject = (err: Error): void => {
+            if (settled) return;
+            settled = true;
+
+            cleanupError();
+            abortActiveWrites();
+
+            // wait for all writes to be "finished" before rejecting the parsing
+            Promise.allSettled(pendingFileWrites)
+                .finally(() => {
+                    // its save to destory bb now because all streams are finished now
+                    // bb listerns still present but wont trigger abort again
+                    bb.destroy();
+
+                    // save files into ctx to allow global cleanup after the req is finsihed
+                    ctx.files = files;
+                    reject(err);
+                });
+        };
+
+        /* setup handler */
+        // error in byte guard (limit exceeded)
+        byteGuard.on('error', (err) => {
+            // TODO: it can only be a PipeErr
+            settleReject(err);
+        });
+
+        // bb field event
+        bb.on("field", (name, value) => {
+            fields[name] = value;
+        });
+
+        // bb file event
+        bb.on("file", (name, fileStream, info) => {
+            /* withdraw file if parsing is settled already */
+            if (settled) {
+                /* already "done"
+*/                fileStream.on('error', () => { });  // unhandled error events will be handled as uncaught execptions
+                fileStream.resume();
+                return;
+            }
+
             /* check if file is allowed */
             if (
-                !route.files ||
-                (route.files && !route.files[name])
+                !route.files ||             // no files definied
+                (
+                    route.files &&          // files definied
+                    !(name in route.files)  // but current file is not "allowed"
+                )
             ) {
                 /* skip file */
-                file.resume();
+                fileStream.on('error', () => { });  // unhandled error events will be handled as uncaught execptions
+                fileStream.resume();
                 return;
             }
 
@@ -46,8 +159,6 @@ async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>)
             const { filename, encoding, mimeType } = info;
             const filePath = path.join(os.tmpdir(), `${fastUUID()}_${filename}`);
             const writeStream = createWriteStream(filePath);
-
-            let fileSize = 0;
 
             /* create result */
             const fileInfo: FileUpload = {
@@ -57,40 +168,80 @@ async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>)
                 mimeType: mimeType,
                 path: filePath
             };
-
-            /* setup handler */
-            file.on("data", (chunk: Buffer) => {
-                fileSize += chunk.length;
-            });
-
-            file.on("end", () => {
-                fileInfo.size = fileSize;
-            });
-
-            file.pipe(writeStream);
-
             /* save to result */
+            // -> in case of failure the path is visible from outside, so it can be used for cleanup #
             if (!files[name]) files[name] = [];
             files[name].push(fileInfo);
-        });
 
-        busbuy.on("field", (name, value) => {
-            fields[name] = value;
-        });
+            /* create stream couple */
+            const streamEntry = { fileStream, writeStream };
+            activeWrites.add(streamEntry);
 
-        busbuy.on("error", (err) => {
-            reject(err);
-        });
-
-        busbuy.on("finish", () => {
-            resolve({
-                fields,
-                files
+            /* file size counter */
+            fileStream.on("data", (chunk: Buffer) => {
+                fileInfo.size += chunk.length;
             });
+
+            /* create writeStream promise */
+            const writePromise = new Promise<void>((res, rej) => {
+                let localSettled = false;
+
+                writeStream.on('close', () => {
+                    if (localSettled) return;
+                    localSettled = true;
+                    /* delete entry from list to avoid double "end" */
+                    activeWrites.delete(streamEntry);
+                    res();
+                });
+
+                fileStream.on('error', (err: Error) => {
+                    if (localSettled) return;
+                    if (settled) {
+                        /* already in end / reject flow */
+                        writeStream.destroy();
+                        return;
+                    }
+                    localSettled = true;
+                    activeWrites.delete(streamEntry);
+                    rej(err);
+                });
+
+                writeStream.on('error', (err: Error) => {
+                    if (localSettled) return;
+                    if (settled) return;
+                    localSettled = true;
+                    activeWrites.delete(streamEntry);
+                    rej(err);
+                });
+            });
+
+            /* pipe stream to write it on disc & add promise to pending list */
+            fileStream.pipe(writeStream);
+            pendingFileWrites.push(writePromise);
         });
 
-        /* start parsing */
-        ctx.req.pipe(busbuy);
+        // bb error event
+        bb.on("error", (err: Error) => {
+            settleReject(err);
+        });
+
+        // bb close event
+        bb.on('close', () => {
+            if (settled) return;
+
+            /* wait for all pending files to finish or fail */
+            Promise.all(pendingFileWrites)
+                .then(() => {
+                    /* all parsing successfull and all files saved locally */
+                    settled = true;
+                    cleanupSuccess();
+                    resolve({ fields, files });
+                })
+                .catch((err: Error) => settleReject(err));
+        })
+
+        /* start parsing by piping bb */
+        ctx.req.pipe(byteGuard).pipe(bb);
     });
 }
 function normalizeQuery(query: Record<string, string>): Record<string, string | boolean> {
@@ -191,20 +342,25 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
             /**
              * BODY
              */
-            const len = parseInt(ctx.req.headers['content-length'] || '0');
+            const contentLen = parseInt(ctx.req.headers['content-length'] || '0');
             const isBodyMethod = ALLOWED_BODY_METHODS.includes(ctx.req.method as HTTPMethod);
+            // extract body limit from global config or route specifc options
+            const bodyLimit = route.bodyLimit !== undefined
+                ? route.bodyLimit
+                : opts.bodyLimit;
 
             /* stop if payload to big */
-            if (opts.bodyLimit > 0 && len > opts.bodyLimit) {
+            if (bodyLimit > 0 && contentLen > bodyLimit) {
                 /* body to big */
-                ctx.req.resume();   // TODO: give him hard cut-off with destroy?
-                throw new ContentTooLargePipeErr(opts.bodyLimit, len);
+                ctx.req.pause();
+                throw new ContentTooLargePipeErr(bodyLimit, contentLen);
             }
 
             /* ignore body if not needed */
             if (!isBodyMethod || (!route.body && !route.files)) {
                 /* just ignore body to avoid backpressure */
                 ctx.req.resume();
+                // TODO: use pause??
                 return;
             }
 
@@ -218,7 +374,7 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
             if (isContentType(contentType, 'multipart/form-data')) {
                 /* parse data via busboy */
                 try {
-                    const { fields, files } = await parseMultiPartBody(ctx, route);
+                    const { fields, files } = await parseMultiPartBody(ctx, route, bodyLimit);
                     ctx.files = files;  /* only files in ctx.files are considered */
 
                     if (route.body) {
@@ -232,7 +388,13 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
                     }
                 }
                 catch (e) {
-                    throw new BadRequestPipeErr('Could not parse multipart/form-data body.');
+                    if (e instanceof PipeError) {
+                        throw e;
+                    }
+                    else if (e instanceof Error) {
+                        throw new BadRequestPipeErr(e.message);
+                    }
+                    // TODO: ignore?
                 }
             }
             else {
@@ -242,6 +404,12 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
                 let size = 0;
                 for await (const chunk of ctx.req as AsyncIterable<Buffer>) {
                     size += chunk.length;
+
+                    if (bodyLimit > 0 && size > bodyLimit) {
+                        chunks.length = 0;  // clear buffered data
+                        ctx.req.pause();
+                        throw new ContentTooLargePipeErr(bodyLimit, size);
+                    }
                     chunks.push(chunk);
                 }
                 if (!size) {

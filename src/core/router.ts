@@ -1,11 +1,11 @@
 /*** imports ***/
 import fastJSON from "fast-json-stringify";
-import { parseAndValidateRequestStage } from "../stages/requestParser";
+import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser";
 import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
-    maxBodyLength: 0
+    maxBodyLength: BODY_LIMIT_DEFAULT
 }
 
 /*** class ***/
@@ -40,7 +40,8 @@ export class Router<GlobalState = {}> {
             files: optionsOrHandler.files,
             params: optionsOrHandler.params,
             query: optionsOrHandler.query,
-            cookies: optionsOrHandler.cookies
+            cookies: optionsOrHandler.cookies,
+            bodyLimit: optionsOrHandler.bodyLimit
         });
     }
     /*** public functions ***/
@@ -139,7 +140,7 @@ export class Router<GlobalState = {}> {
         const hand = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
         this._on('PUT', path, opts, hand!);
     }
-    
+
     // PATCH
     patch<Path extends string, State = GlobalState>(path: Path, handler: PipeRouteHandler<Path, RouteOptions<Path>, State>): void;
     patch<

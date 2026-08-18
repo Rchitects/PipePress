@@ -70,6 +70,7 @@ export type PipeResponse<Body = any> = {
     cookies?: SetCookieEntry[];
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
+    terminate?: boolean;
 }
 export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
 export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = {}> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
@@ -90,6 +91,7 @@ export type Route<Path extends string> = {
     params?: RouteParams<Path>;
     query?: ObjectType<any, boolean>;
     cookies?: ObjectType<any, boolean>;
+    bodyLimit?: number;
 }
 export type RouteOptions<
     Path extends string,
@@ -103,6 +105,7 @@ export type RouteOptions<
     stages?: Stages;
     contentType?: HTTPContentType;
     cookies?: ObjectType<any, boolean>;
+    bodyLimit?: number;
 };
 export type FileUpload = {
     filename: string;
