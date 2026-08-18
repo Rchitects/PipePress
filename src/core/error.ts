@@ -59,10 +59,11 @@ const TooManyReqeuestsPipeErrSchema = dt.Object({
 // TODO: unforce user to use message in any error?
 export abstract class PipeError<T extends PipeErrPayload> extends Error {
     status: HTTPStatus;
+    terminate: boolean = false;
     protected payload: T;
     #serializer?: stringyfy<T>;
 
-    constructor(name: string, status: HTTPStatus, payload: T, schema?: DataType<T, boolean>) {
+    constructor(name: string, status: HTTPStatus, payload: T, terminate?: boolean, schema?: DataType<T, boolean>) {
         super(payload.message);
         this.status = status;
         this.name = name;
@@ -71,6 +72,9 @@ export abstract class PipeError<T extends PipeErrPayload> extends Error {
         if (schema) {
             this.#serializer = fastJSON(schema.toJSONSchema() as any);
         }
+        if (terminate !== undefined) {
+            this.terminate = terminate;
+        }
     }
 
     /*** public function ***/
@@ -78,48 +82,49 @@ export abstract class PipeError<T extends PipeErrPayload> extends Error {
         return pipeResponse({
             status: this.status,
             body: this.payload,
-            serializer: this.#serializer
+            serializer: this.#serializer,
+            terminate: this.terminate
         });
     }
 }
 /*** pre-defiened errors ***/
 export class InternalPipeErr extends PipeError<DefaultPipeErrPayload> {
     constructor(err: Error) {
-        super(err.name, HTTPStatus.INTERNAL_SERVER_ERROR, { message: err.message, errName: err.name }, DefaultPipeErrSchema);
+        super(err.name, HTTPStatus.INTERNAL_SERVER_ERROR, { message: err.message, errName: err.name }, false, DefaultPipeErrSchema);
     }
 }
 export class BadRequestPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
-        super('BadRequestPipeErr', HTTPStatus.BAD_REQUEST, { message }, BadRequestPipeErrSchema);
+        super('BadRequestPipeErr', HTTPStatus.BAD_REQUEST, { message }, false, BadRequestPipeErrSchema);
     }
 }
 export class RouteNotFoundPipeErr extends PipeError<NotFoundPipErrPayload> {
     constructor(method: HTTPMethod, path: string, message: string = 'URL not found') {
-        super('RouteNotFoundPipeErr', HTTPStatus.NOT_FOUND, { message, method, path }, NotFoundPipErrSchema);
+        super('RouteNotFoundPipeErr', HTTPStatus.NOT_FOUND, { message, method, path }, false, NotFoundPipErrSchema);
     }
 }
 export class ValidationPipeErr extends PipeError<BadRequestPipeErrPayload> {
     constructor(message: string) {
-        super('ValidationPipeErr', HTTPStatus.BAD_REQUEST, { message }, BadRequestPipeErrSchema)
+        super('ValidationPipeErr', HTTPStatus.BAD_REQUEST, { message }, false, BadRequestPipeErrSchema)
     }
 }
 export class ContentTooLargePipeErr extends PipeError<ContentTooLargePipeErrPayload> {
     constructor(allowed: number, sent: number) {
-        super('ContentTooLargePipeErr', HTTPStatus.CONTENT_TOO_LARGE, { message: 'Payload is too large', allowed, sent }, ContentTooLargePipeErrSchema);
+        super('ContentTooLargePipeErr', HTTPStatus.CONTENT_TOO_LARGE, { message: 'Payload is too large', allowed, sent }, true, ContentTooLargePipeErrSchema);
     }
 }
 export class TooManyRequestsPipeErr extends PipeError<TooManyReqeuestsPipeErrPayload> {
     constructor(retryAfterMs: number, reqeustLimit: number, requestCount: number) {
-        super('TooManyRequestsPipeErr', HTTPStatus.TOO_MANY_REQUESTS, { message: 'Too many requests', reqeustLimit, requestCount, retryAfterMs }, TooManyReqeuestsPipeErrSchema);
+        super('TooManyRequestsPipeErr', HTTPStatus.TOO_MANY_REQUESTS, { message: 'Too many requests', reqeustLimit, requestCount, retryAfterMs }, true, TooManyReqeuestsPipeErrSchema);
     }
 }
 export class UnauthorizedPipeErr extends PipeError<PipeErrPayload> {
     constructor(message: string) {
-        super('UnauthorizedPipeErr', HTTPStatus.UNAUTHORIZED, { message }, PipeErrSchema);
+        super('UnauthorizedPipeErr', HTTPStatus.UNAUTHORIZED, { message }, false, PipeErrSchema);
     }
 }
 export class ForbiddenPipeErr extends PipeError<PipeErrPayload> {
     constructor(message: string) {
-        super('ForbiddenPipeErr', HTTPStatus.FORBIDDEN, { message }, PipeErrSchema);
+        super('ForbiddenPipeErr', HTTPStatus.FORBIDDEN, { message }, false, PipeErrSchema);
     }
 }

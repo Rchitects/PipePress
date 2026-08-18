@@ -38,6 +38,7 @@ export function pipeResponse<Body = any>(opts: {
     serializer?: stringyfy<Body>;
     contentType?: HTTPContentType;
     cookies?: SetCookieEntry[];
+    terminate?: boolean;
 }): PipeResponse<Body> {
     return { [PIPE_RESPONSE_BRAND]: true, ...opts };
 }

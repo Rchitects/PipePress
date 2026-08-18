@@ -99,7 +99,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
 
                             if (stageRes) {
                                 /* if stage returned something stop pipeline with response */
-                                return this._sendResponse(res, stageRes);
+                                return this._sendResponse(ctx, stageRes);
                             }
                         }
                     }
@@ -108,11 +108,11 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
                     const mainRes = await route.handler(ctx, state);
 
                     if (isPipeResponse(mainRes)) {
-                        this._sendResponse(res, mainRes);
+                        this._sendResponse(ctx, mainRes);
                     }
                     else if (mainRes) {
                         /* create a valid OK response */
-                        this._sendResponse(res, pipeResponse({
+                        this._sendResponse(ctx, pipeResponse({
                             status: HTTPStatus.OK,
                             body: mainRes,
                             serializer: route.serializer,
@@ -122,7 +122,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
                     }
                     else {
                         /* route is a no content response */
-                        this._sendResponse(res, pipeResponse({ status: HTTPStatus.NO_CONTENT }));
+                        this._sendResponse(ctx, pipeResponse({ status: HTTPStatus.NO_CONTENT }));
                     }
                 }
                 catch (e) {
@@ -266,22 +266,26 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
         };
         return ctx;
     }
-    private _sendResponse(res: http.ServerResponse, result: PipeResponse) {
-        if (res.headersSent) return;
+    private _sendResponse(ctx: PipeContext<any, any>, result: PipeResponse) {
+        if (ctx.res.headersSent) return;
         /* set status */
-        res.statusCode = result.status;
+        ctx.res.statusCode = result.status;
 
         /* set headers */
         if (result.headers) {
             for (const [head, val] of Object.entries(result.headers)) {
-                res.setHeader(head, val);
+                ctx.res.setHeader(head, val);
             }
+        }
+        /* set terminate header */
+        if (result.terminate) {
+            ctx.res.setHeader('Connection', 'close');
         }
 
         /* set cookies */
         if (result.cookies) {
             for (const { name, value, ...opts } of result.cookies) {
-                setCookie(res, name, value, opts);
+                setCookie(ctx.res, name, value, opts);
             }
         }
 
@@ -291,32 +295,40 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
         /* create data */
         let body: any;  // string or buffer
         if (result.status === HTTPStatus.NO_CONTENT) {
-            return res.end();
+            return ctx.res.end();
         }
         else if (contentType !== 'application/json') {
-            res.setHeader('Content-Type', contentType);
+            ctx.res.setHeader('Content-Type', contentType);
             body = result.body;
         }
         else {
             /* TODO: allow other content types */
-            res.setHeader('Content-Type', 'application/json' as HTTPContentType);
+            ctx.res.setHeader('Content-Type', 'application/json' as HTTPContentType);
             body = result.serializer ? result.serializer(result.body) : JSON.stringify(result.body);
         }
-        res.end(body);
+        /* send body / responst */
+        ctx.res.end(body);
+
+        /* wait for finish to terminate if requested */
+        if (result.terminate) {
+            ctx.res.on('finish', () => {
+                ctx.req.destroy();
+            });
+        }
     }
     private _handleError(e: any, ctx: PipeContext<any, any>) {
         // TODO: add custome error handler?
         try {
             if (e instanceof PipeError) {
-                this._sendResponse(ctx.res, e.toPipeResponse());
+                this._sendResponse(ctx, e.toPipeResponse());
             }
             else if (e instanceof Error) {
                 const err = new InternalPipeErr(e);
-                this._sendResponse(ctx.res, err.toPipeResponse());
+                this._sendResponse(ctx, err.toPipeResponse());
             }
             else {
                 const err = new InternalPipeErr(new Error(e?.toString() || 'Unknown error'));
-                this._sendResponse(ctx.res, err.toPipeResponse());
+                this._sendResponse(ctx, err.toPipeResponse());
             }
         }
         catch (e) {
@@ -337,7 +349,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
 
                 if (stageRes) {
                     /* if stage returned something stop pipeline with response */
-                    return this._sendResponse(res, stageRes);
+                    return this._sendResponse(ctx, stageRes);
                 }
             }
 
@@ -349,7 +361,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState> {
                     if (!res.serializer && this._notFoundCustom.serializer) {
                         res.serializer = this._notFoundCustom.serializer;
                     }
-                    this._sendResponse(ctx.res, res);
+                    this._sendResponse(ctx, res);
                 }
                 /**
                  * TODO:
