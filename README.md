@@ -74,6 +74,7 @@ Route `options` may include:
 - `response`: response schema for fast serialization
 - `stages`: route-local stages
 - `contentType`: custom response content type
+- `bodyLimit`: route specfic body limit in bytes
 
 ### Built-in pipelines
 Each route pipeline automatically includes:
