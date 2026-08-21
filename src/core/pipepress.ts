@@ -129,6 +129,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                     this._handleError(e, ctx);
                 }
                 finally {
+                    /* temp file cleanup */
                     if (ctx.files) {
                         /* loop over files and delete temp files */
                         for (const filedName in ctx.files) {
@@ -139,7 +140,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                                     import('fs').then(fs => {
                                         fs.unlink(file.path, (err) => {
                                             if (err) {
-                                                this.emit('error', err);
+                                                this._emit('unlink_failed', file.path, err);
                                             }
                                         });
                                     });
@@ -147,6 +148,8 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                             }
                         }
                     }
+                    /* make sure socket is finished */
+                    this._cleanupSocket(ctx);
                 }
             }, { pattern: route.path } as RouteStore);
         }
@@ -163,11 +166,26 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             this._server = http.createServer((req, res) => {
                 this._handleRequest(req, res);
             });
-            this._server.on('error', (err) => {
-                this.emit('sock:error', err);
+            
+            /* setup startup-error handler */
+            this._server.once('error', (err) => {
+                reject(err);
             });
+
             /* start server */
             this._server.listen(port, () => {
+                /* clean error listener */
+                this._server?.removeAllListeners('error');
+
+                /* setup finally listener */
+                this._server!.on('error', (err) => {
+                    this._emit('error', err);
+                });
+                this._server!.on('clientError', (err, socket) => {
+                    this._emit('clientError', err);
+                });
+
+                /* finish startup */
                 resolve();
             });
         });
@@ -336,13 +354,9 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             }
         }
         catch (e) {
-            /* double failer -> make it clear for logging or somehting like this */
-            if (e instanceof Error) {
-                this.emit('error', e);
-            }
-            else {
-                this.emit('error', new Error(`${e}`));
-            }
+            /* double failer emit error */
+            let err = e instanceof Error ? e : new Error(`${e}`);
+            this._emit('unable_to_response', err);
         }
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -386,6 +400,10 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         catch (e) {
             this._handleError(e, ctx);
         }
+        finally {
+            /* make sure socket is finished */
+            this._cleanupSocket(ctx);
+        }
     }
     private _corsStageHandler(ctx: PipeContext<any, any>, path: string) {
         /* ORIGIN */
@@ -399,6 +417,11 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         const allowedHeaders = ctx.req.headers['access-control-request-headers']; // TODO: make configurable
         if (allowedHeaders && allowedHeaders.length > 0) {
             ctx.res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+        }
+    }
+    private _cleanupSocket(ctx: PipeContext<any, any>) {
+        if (ctx.res.socket && !ctx.res.socket.destroyed) {
+            ctx.res.socket.destroy();
         }
     }
 }
