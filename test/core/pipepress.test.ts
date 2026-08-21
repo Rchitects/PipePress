@@ -1,6 +1,7 @@
+import fs from "fs";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { PipePress } from "../../src";
-import fs, { unlink } from "fs";
+import net from "net";
 
 /*** variables ***/
 const PORT = 3004;
@@ -17,6 +18,9 @@ function uploadFile(path: string, filename: string, fileSize: number = 500 * 102
         method: 'POST',
         body: form
     });
+}
+async function sleep(timeMs: number) {
+    return new Promise<void>((res) => setTimeout(res, timeMs));
 }
 
 /*** mocking ***/
@@ -52,7 +56,8 @@ describe('PipePress basic functions', () => {
         /* create server */
         app.build();
         await app.listen(PORT);
-    })
+    });
+
     it('should trigger a failure while unlinking uploaded files', async () => {
         /* mockup unlink */
         const mockErr = new Error('Disk Error');
@@ -115,5 +120,28 @@ describe('PipePress basic functions', () => {
 
         expect(sendRespMock).toHaveBeenCalled();
         expect(emittedError).toBe(mockErr);
+    });
+
+    it('should trigger client error due to invalid http data', async () => {
+        const waitFor = new Promise((res) => {
+            app.on('clientError', (err) => {
+                res(err);
+            });
+        })
+
+        const client = net.connect({ port: PORT }, () => {
+            client.write('THIS IS NOT HTTP');
+        });
+
+        let err = await waitFor;
+        expect((err as any).code).toBe('HPE_INVALID_METHOD')
+    });
+
+    it('should fail to start the server', async () => {
+        /* create a new app with the same port, which should fail */
+        const app2 = new PipePress();
+        app2.build();
+
+        expect(() => app2.listen(PORT)).rejects.toThrowError('EADDRINUSE');
     });
 });

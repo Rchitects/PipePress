@@ -263,5 +263,6 @@ export type PipePressInjectResponse = {
 export type PipePressEvents = {
     unlink_failed: [path: string, err: Error],
     unable_to_response: [err: Error],
-    'sock:error': [err: Error],
+    error: [err: Error],
+    clientError: [err: Error]
 }

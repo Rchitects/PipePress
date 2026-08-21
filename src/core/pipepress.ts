@@ -140,7 +140,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                                     import('fs').then(fs => {
                                         fs.unlink(file.path, (err) => {
                                             if (err) {
-                                                this.emit('unlink_failed', file.path, err);
+                                                this._emit('unlink_failed', file.path, err);
                                             }
                                         });
                                     });
@@ -166,11 +166,26 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             this._server = http.createServer((req, res) => {
                 this._handleRequest(req, res);
             });
-            this._server.on('error', (err) => {
-                this.emit('sock:error', err);
+            
+            /* setup startup-error handler */
+            this._server.once('error', (err) => {
+                reject(err);
             });
+
             /* start server */
             this._server.listen(port, () => {
+                /* clean error listener */
+                this._server?.removeAllListeners('error');
+
+                /* setup finally listener */
+                this._server!.on('error', (err) => {
+                    this._emit('error', err);
+                });
+                this._server!.on('clientError', (err, socket) => {
+                    this._emit('clientError', err);
+                });
+
+                /* finish startup */
                 resolve();
             });
         });
@@ -341,7 +356,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         catch (e) {
             /* double failer emit error */
             let err = e instanceof Error ? e : new Error(`${e}`);
-            this.emit('unable_to_response', err);
+            this._emit('unable_to_response', err);
         }
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
