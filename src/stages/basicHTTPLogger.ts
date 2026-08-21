@@ -8,7 +8,7 @@ type LogEntry = {
     message: string;
 };
 /*** defintions ***/
-let logBuffer: LogEntry[] = [];
+const logBuffer: LogEntry[] = [];
 
 /*** helper functions ***/
 const yellow = (text: string) => `\x1b[33m${text}\x1b[0m`;
@@ -38,7 +38,7 @@ function addToLogBuffer(message: string) {
 export const basicHTTPLogger = (printer?: (message: string) => void): PipeStage<void> => {
     return {
         runBeforeParse: true,
-        handler: async (ctx) => {
+        handler: (ctx) => {
             const { method, url } = ctx.req;
             const startTime = Date.now();
             const reqID = fastUUID(startTime);

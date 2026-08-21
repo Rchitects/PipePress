@@ -6,6 +6,7 @@ import http from "http";
 
 /*** helpers ***/
 let app: PipePress;
+let port = 0;
 
 async function postJSON(url: string, body: any, headers?: Record<string, string>) {
     return fetch(url, {
@@ -184,7 +185,7 @@ describe("Request Parser Stage", () => {
         });
 
         app.build();
-        await app.listen(3004);
+        port = await app.listen(0);
     });
 
     afterAll(() => {
@@ -193,7 +194,7 @@ describe("Request Parser Stage", () => {
 
     describe("Body Parsing - JSON", () => {
         it("should parse valid JSON body", async () => {
-            const res = await postJSON("http://localhost:3004/body-json", {
+            const res = await postJSON("http://localhost:" + port + "/body-json", {
                 name: "John",
                 age: 30
             });
@@ -203,7 +204,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should fail on invalid JSON", async () => {
-            const res = await fetch("http://localhost:3004/body-json", {
+            const res = await fetch("http://localhost:" + port + "/body-json", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: '{invalid json'
@@ -212,14 +213,14 @@ describe("Request Parser Stage", () => {
         });
 
         it("should fail on validation error", async () => {
-            const res = await postJSON("http://localhost:3004/body-json", {
+            const res = await postJSON("http://localhost:" + port + "/body-json", {
                 name: "John"
             });
             expect(res.status).toBe(400);
         });
 
         it("should capture raw JSON body", async () => {
-            const res = await postJSON("http://localhost:3004/raw-body", {
+            const res = await postJSON("http://localhost:" + port + "/raw-body", {
                 value: "test"
             });
             expect(res.status).toBe(200);
@@ -231,7 +232,7 @@ describe("Request Parser Stage", () => {
 
     describe("Body Parsing - URL Encoded", () => {
         it("should parse URL encoded body", async () => {
-            const res = await fetch("http://localhost:3004/body-form", {
+            const res = await fetch("http://localhost:" + port + "/body-form", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
@@ -245,7 +246,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should fail on validation error", async () => {
-            const res = await fetch("http://localhost:3004/body-form", {
+            const res = await fetch("http://localhost:" + port + "/body-form", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: "admin" }).toString()
@@ -259,7 +260,7 @@ describe("Request Parser Stage", () => {
             const form = new FormData();
             form.append('avatar', new Blob([Buffer.from("image data content")]), 'avatar.jpg');
 
-            const res = await fetch("http://localhost:3004/upload-required", {
+            const res = await fetch("http://localhost:" + port + "/upload-required", {
                 method: 'POST',
                 body: form
             });
@@ -272,7 +273,7 @@ describe("Request Parser Stage", () => {
             const form = new FormData();
             // Send empty form without the required 'avatar' file
 
-            const res = await fetch("http://localhost:3004/upload-required", {
+            const res = await fetch("http://localhost:" + port + "/upload-required", {
                 method: 'POST',
                 body: form as any
             });
@@ -285,7 +286,7 @@ describe("Request Parser Stage", () => {
             // HTTP Request manuell aufbauen OHNE Content-Length
             const req = http.request({
                 hostname: 'localhost',
-                port: 3004,
+                port: port,
                 path: '/upload-required',
                 method: 'POST',
                 headers: {
@@ -330,7 +331,7 @@ describe("Request Parser Stage", () => {
         it("should fail when required file is missing (empty form)", async () => {
             // Sending content-type multipart without actual data triggers parsing error
             // This is expected behavior - malformed multipart data
-            const res = await fetch("http://localhost:3004/upload-required", {
+            const res = await fetch("http://localhost:" + port + "/upload-required", {
                 method: 'POST',
                 headers: { 'Content-Type': 'multipart/form-data; boundary=test' },
                 body: '--test--'
@@ -342,7 +343,7 @@ describe("Request Parser Stage", () => {
 
     describe("Query Parameters", () => {
         it("should parse and validate query parameters", async () => {
-            const res = await fetch("http://localhost:3004/query-params?search=test&limit=10&flag=active");
+            const res = await fetch("http://localhost:" + port + "/query-params?search=test&limit=10&flag=active");
             expect(res.status).toBe(200);
             const data = await res.json();
             expect(data.query.search).toBe("test");
@@ -351,12 +352,12 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle missing query parameters", async () => {
-            const res = await fetch("http://localhost:3004/query-params");
+            const res = await fetch("http://localhost:" + port + "/query-params");
             expect(res.status).toBe(400);
         });
 
         it("should normalize empty query parameters to boolean", async () => {
-            const res = await fetch("http://localhost:3004/query-normalize?flag&key=value");
+            const res = await fetch("http://localhost:" + port + "/query-normalize?flag&key=value");
             expect(res.status).toBe(200);
             const data = await res.json();
             expect(data.query.flag).toBe(true);
@@ -364,7 +365,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle array query parameters (last value wins)", async () => {
-            const res = await fetch("http://localhost:3004/query-normalize?id=1&id=2&id=3");
+            const res = await fetch("http://localhost:" + port + "/query-normalize?id=1&id=2&id=3");
             expect(res.status).toBe(200);
             const data = await res.json();
             expect(data.query.id).toBe("3");
@@ -373,7 +374,7 @@ describe("Request Parser Stage", () => {
 
     describe("Path Parameters", () => {
         it("should parse and validate path parameters", async () => {
-            const res = await fetch("http://localhost:3004/user/123");
+            const res = await fetch("http://localhost:" + port + "/user/123");
             expect(res.status).toBe(200);
             const data = await res.json();
             expect(data.userId).toBe("123");
@@ -382,7 +383,7 @@ describe("Request Parser Stage", () => {
 
     describe("Cookies - Parsed & Validated", () => {
         it("should parse and validate cookies", async () => {
-            const res = await fetch("http://localhost:3004/cookies", {
+            const res = await fetch("http://localhost:" + port + "/cookies", {
                 headers: {
                     'Cookie': 'sessionId=abc123; token=xyz789'
                 }
@@ -394,7 +395,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle empty cookie string", async () => {
-            const res = await fetch("http://localhost:3004/cookies", {
+            const res = await fetch("http://localhost:" + port + "/cookies", {
                 headers: {
                     'Cookie': ''
                 }
@@ -403,14 +404,14 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle no cookies", async () => {
-            const res = await fetch("http://localhost:3004/cookies");
+            const res = await fetch("http://localhost:" + port + "/cookies");
             expect(res.status).toBe(400);
         });
     });
 
     describe("Cookies - Raw Parsing", () => {
         it("should decode URI encoded cookies", async () => {
-            const res = await fetch("http://localhost:3004/cookies-raw", {
+            const res = await fetch("http://localhost:" + port + "/cookies-raw", {
                 headers: {
                     'Cookie': 'key1=value%20with%20space; key2=normal'
                 }
@@ -422,7 +423,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle malformed URI encoded cookies", async () => {
-            const res = await fetch("http://localhost:3004/cookies-raw", {
+            const res = await fetch("http://localhost:" + port + "/cookies-raw", {
                 headers: {
                     'Cookie': 'key1=%ZZ; key2=normal'
                 }
@@ -434,7 +435,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle cookies with equals sign in value", async () => {
-            const res = await fetch("http://localhost:3004/cookies-raw", {
+            const res = await fetch("http://localhost:" + port + "/cookies-raw", {
                 headers: {
                     'Cookie': 'token=abc=def=ghi'
                 }
@@ -445,7 +446,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle cookies with spacing", async () => {
-            const res = await fetch("http://localhost:3004/cookies-raw", {
+            const res = await fetch("http://localhost:" + port + "/cookies-raw", {
                 headers: {
                     'Cookie': '  key1  =  value1  ;  key2  =  value2  '
                 }
@@ -459,7 +460,7 @@ describe("Request Parser Stage", () => {
 
     describe("Body Limit - Global", () => {
         it("should accept body within global limit", async () => {
-            const res = await postJSON("http://localhost:3004/body-limit-global", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-global", {
                 data: "small"
             });
             expect(res.status).toBe(200);
@@ -467,7 +468,7 @@ describe("Request Parser Stage", () => {
 
         it("should handle reasonable large body", async () => {
             const mediumData = "x".repeat(100000);
-            const res = await postJSON("http://localhost:3004/body-limit-global", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-global", {
                 data: mediumData
             });
             expect(res.status).toBe(200);
@@ -476,7 +477,7 @@ describe("Request Parser Stage", () => {
 
     describe("Body Limit - Route Specific", () => {
         it("should accept body within route limit", async () => {
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: "x".repeat(50)
             });
             expect(res.status).toBe(200);
@@ -487,7 +488,7 @@ describe("Request Parser Stage", () => {
             // JSON wrapper: {"data":"..."} adds ~11 chars
             // So 200 char string should exceed it
             const largeData = "x".repeat(200);
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: largeData
             });
             expect(res.status).toBe(413);
@@ -495,7 +496,7 @@ describe("Request Parser Stage", () => {
 
         it("should reject body well over limit with 413", async () => {
             const hugeData = "x".repeat(500);
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: hugeData
             });
             expect(res.status).toBe(413);
@@ -504,7 +505,7 @@ describe("Request Parser Stage", () => {
 
     describe("HTTP Methods - Body Handling", () => {
         it("GET should not send body", async () => {
-            const res = await fetch("http://localhost:3004/get-no-body", {
+            const res = await fetch("http://localhost:" + port + "/get-no-body", {
                 method: 'GET'
             });
             expect(res.status).toBe(200);
@@ -513,7 +514,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("PUT should parse body", async () => {
-            const res = await fetch("http://localhost:3004/put-body", {
+            const res = await fetch("http://localhost:" + port + "/put-body", {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: "updated" })
@@ -524,7 +525,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("PATCH should parse body", async () => {
-            const res = await fetch("http://localhost:3004/patch-body", {
+            const res = await fetch("http://localhost:" + port + "/patch-body", {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: "patched" })
@@ -537,7 +538,7 @@ describe("Request Parser Stage", () => {
 
     describe("Content Types", () => {
         it("should handle JSON with charset", async () => {
-            const res = await postJSON("http://localhost:3004/body-json", {
+            const res = await postJSON("http://localhost:" + port + "/body-json", {
                 name: "John",
                 age: 30
             }, {
@@ -551,7 +552,7 @@ describe("Request Parser Stage", () => {
 
     describe("Empty Body", () => {
         it("should handle POST with no body", async () => {
-            const res = await fetch("http://localhost:3004/empty-body", {
+            const res = await fetch("http://localhost:" + port + "/empty-body", {
                 method: 'POST'
             });
             expect(res.status).toBe(200);
@@ -560,7 +561,7 @@ describe("Request Parser Stage", () => {
         });
 
         it("should handle POST with empty body", async () => {
-            const res = await fetch("http://localhost:3004/empty-body", {
+            const res = await fetch("http://localhost:" + port + "/empty-body", {
                 method: 'POST',
                 body: ''
             });
@@ -572,7 +573,7 @@ describe("Request Parser Stage", () => {
 
     describe("No Body Expected", () => {
         it("should skip parsing if body not expected by route", async () => {
-            const res = await postJSON("http://localhost:3004/no-body", {
+            const res = await postJSON("http://localhost:" + port + "/no-body", {
                 test: "data"
             });
             expect(res.status).toBe(200);
@@ -586,7 +587,7 @@ describe("Request Parser Stage", () => {
             // Route limit is 200 bytes, global is 1MB
             // Route limit should be enforced
             const dataSize = "x".repeat(300);
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: dataSize
             });
             expect(res.status).toBe(413);
@@ -595,7 +596,7 @@ describe("Request Parser Stage", () => {
         it("should enforce route limit of 200 bytes for body-limit-route", async () => {
             // Multiple tests to ensure route limit is strictly enforced
             const data = "x".repeat(250);
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: data
             });
             expect(res.status).toBe(413);
@@ -604,7 +605,7 @@ describe("Request Parser Stage", () => {
         it("should enforce strict body limits at 200 bytes", async () => {
             // Just slightly over the limit
             const data = "x".repeat(210);
-            const res = await postJSON("http://localhost:3004/body-limit-route", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: data
             });
             expect(res.status).toBe(413);
@@ -613,14 +614,14 @@ describe("Request Parser Stage", () => {
         it("should allow body within limit and reject over", async () => {
             // Within limit - should pass
             const data = "x".repeat(50);
-            const res1 = await postJSON("http://localhost:3004/body-limit-route", {
+            const res1 = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: data
             });
             expect(res1.status).toBe(200);
 
             // Over limit - should fail
             const hugeData = "x".repeat(300);
-            const res2 = await postJSON("http://localhost:3004/body-limit-route", {
+            const res2 = await postJSON("http://localhost:" + port + "/body-limit-route", {
                 data: hugeData
             });
             expect(res2.status).toBe(413);
@@ -629,7 +630,7 @@ describe("Request Parser Stage", () => {
         it("should allow body within global limit", async () => {
             // Global limit is 1MB - this test confirms we can send medium-sized payloads
             const mediumData = "x".repeat(500000);
-            const res = await postJSON("http://localhost:3004/body-limit-global", {
+            const res = await postJSON("http://localhost:" + port + "/body-limit-global", {
                 data: mediumData
             });
             expect(res.status).toBe(200);

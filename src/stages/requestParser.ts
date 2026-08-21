@@ -4,9 +4,9 @@ import { createWriteStream } from "node:fs";
 import os from "node:os";
 import Stream from "node:stream";
 import path from "path";
-import { BadRequestPipeErr, ContentTooLargePipeErr, InternalPipeErr, PipeError, ValidationPipeErr } from "../core/error";
+import { BadRequestPipeErr, ContentTooLargePipeErr, PipeError, ValidationPipeErr } from "../core/error";
 import { FileUpload, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
-import { fastUUID, isContentType } from "../core/utils";
+import { fastUUID, isArray, isContentType } from "../core/utils";
 
 /*** types ***/
 type RequestParserOptions = {
@@ -107,7 +107,7 @@ async function parseMultiPartBody(ctx: PipeContext<any, any>, route: Route<any>,
             abortActiveWrites();
 
             // wait for all writes to be "finished" before rejecting the parsing
-            Promise.allSettled(pendingFileWrites)
+            void Promise.allSettled(pendingFileWrites)
                 .finally(() => {
                     // its save to destory bb now because all streams are finished now
                     // bb listerns still present but wont trigger abort again
@@ -248,12 +248,13 @@ function normalizeQuery(query: Record<string, string>): Record<string, string | 
     const res = {} as Record<string, string | boolean>;
 
     for (const key in query) {
-        const val = query[key];
-
-        if (Array.isArray(val)) {
-            res[key] = val.pop();
+        let val = query[key];
+        /* if array only use frist */
+        if (isArray<string>(val)) {
+            val = val.shift() ?? '';
         }
-        else if (val === '') {
+        /* empty values are used as boolean true */
+        if (val === '') {
             res[key] = true;
         }
         else {

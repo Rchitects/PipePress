@@ -3,7 +3,7 @@ import { IncomingMessage, ServerResponse } from "http";
 import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieEntry, SetCookieOptions, stringyfy } from "./models";
 
 /*** functions ***/
-export function isContentType(source: HTTPContentType | string, ofType: HTTPContentType): boolean {
+export function isContentType(source: string, ofType: HTTPContentType): boolean {
     return source.toString().includes(ofType);
 }
 export function fastUUID(time: number = Date.now()) {
@@ -31,7 +31,7 @@ export function isPipeResponse(value: unknown): value is PipeResponse {
         PIPE_RESPONSE_BRAND in value
     );
 }
-export function pipeResponse<Body = any>(opts: {
+export function pipeResponse<Body = void>(opts: {
     status: HTTPStatus;
     body?: Body;
     headers?: Record<string, string>;
@@ -47,6 +47,9 @@ export function redirect(location: string, status: 301 | 302 | 303 | 307 | 308 =
         status,
         headers: { Location: location }
     });
+}
+export function isArray<T>(val: T | T[]): val is T[] {
+    return Array.isArray(val);
 }
 
 /**

@@ -1,10 +1,10 @@
 import fs from "fs";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PipePress } from "../../src";
 import net from "net";
 
 /*** variables ***/
-const PORT = 3004;
+let port = 0;
 let app: PipePress;
 
 /*** helper functions ***/
@@ -14,7 +14,7 @@ function uploadFile(path: string, filename: string, fileSize: number = 500 * 102
     const form = new FormData();
     form.append(filename, new Blob([Buffer.from(fileDataRaw)]), `${filename}.txt`);
 
-    return fetch(`http://localhost:${PORT}${path}`, {
+    return fetch(`http://localhost:${port}${path}`, {
         method: 'POST',
         body: form
     });
@@ -55,7 +55,11 @@ describe('PipePress basic functions', () => {
 
         /* create server */
         app.build();
-        await app.listen(PORT);
+        port = await app.listen(0);
+    });
+
+    afterAll(() => {
+        app.close();
     });
 
     it('should trigger a failure while unlinking uploaded files', async () => {
@@ -113,7 +117,7 @@ describe('PipePress basic functions', () => {
 
         /* call endpoint */
         try {
-            const res = await fetch(`http://localhost:${PORT}/error`);
+            const res = await fetch(`http://localhost:${port}/error`);
         }
         catch (e) { /* fetch will fail */ }
         const emittedError = await errPromise;
@@ -129,7 +133,7 @@ describe('PipePress basic functions', () => {
             });
         })
 
-        const client = net.connect({ port: PORT }, () => {
+        const client = net.connect({ port: port }, () => {
             client.write('THIS IS NOT HTTP');
         });
 
@@ -142,6 +146,6 @@ describe('PipePress basic functions', () => {
         const app2 = new PipePress();
         app2.build();
 
-        await expect(() => app2.listen(PORT)).rejects.toThrowError('EADDRINUSE');
+        await expect(() => app2.listen(port)).rejects.toThrowError('EADDRINUSE');
     });
 });

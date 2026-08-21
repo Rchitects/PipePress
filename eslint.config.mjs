@@ -12,7 +12,10 @@ export default tseslint.config(
             'dist-benchmark/**',
             'example/**',
             'coverage/**',
-            'eslint.config.mjs'
+            'eslint.config.mjs',
+            'tsup.config.ts',
+            'vitest.config.ts',
+            'test/**'
         ],
     },
 

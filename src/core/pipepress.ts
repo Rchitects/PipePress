@@ -9,6 +9,7 @@ import { Router } from "./router";
 import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
 import inject from "light-my-request";
 import { isPipeResponse, pipeResponse, setCookie } from "./utils";
+import { AddressInfo } from "net";
 
 /*** types ***/
 type RouteStore = {
@@ -157,7 +158,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         this._build = true;
     }
 
-    listen(port: number): Promise<void> {
+    listen(port: number): Promise<number> {
         return new Promise((resolve, reject) => {
             if (!this._build) reject(new Error('build() was not called'));
             if (this._server) reject(new Error('server is already running'));
@@ -166,7 +167,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             this._server = http.createServer((req, res) => {
                 this._handleRequest(req, res);
             });
-            
+
             /* setup startup-error handler */
             this._server.once('error', (err) => {
                 reject(err);
@@ -186,7 +187,8 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                 });
 
                 /* finish startup */
-                resolve();
+                const port = (this._server!.address() as AddressInfo).port;
+                resolve(port);
             });
         });
     }
