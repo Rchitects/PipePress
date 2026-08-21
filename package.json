@@ -21,7 +21,9 @@
     "benchmark": "npm run build && npm run build:benchmark && node dist-benchmark/benchmark.js",
     "dev:example": "npm run build && npm run run:example",
     "run:example": "ts-node example/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --fix --cache"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +34,7 @@
   },
   "type": "commonjs",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@fastify/cors": "^11.1.0",
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
@@ -55,14 +58,18 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cors": "^2.8.5",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
     "express": "^5.1.0",
     "fastify": "^5.6.2",
     "joi": "^18.0.2",
     "pidusage": "^4.0.1",
+    "prettier": "^3.9.6",
     "reflect-metadata": "^0.2.2",
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^4.0.5"
   },
   "files": [
