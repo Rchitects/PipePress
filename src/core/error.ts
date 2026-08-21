@@ -1,7 +1,7 @@
 /*** imports ***/
 import { HTTPMethod, HTTPStatus, PipeResponse, stringyfy } from "./models";
 import { DataType } from "./datatypes";
-import fastJSON from "fast-json-stringify";
+import fastJSON, { AnySchema } from "fast-json-stringify";
 import dt from "./datatypes";
 import { pipeResponse } from "./utils";
 
@@ -70,7 +70,7 @@ export abstract class PipeError<T extends PipeErrPayload> extends Error {
         this.payload = payload;
         /* create serializer */
         if (schema) {
-            this.#serializer = fastJSON(schema.toJSONSchema() as any);
+            this.#serializer = fastJSON(schema.toJSONSchema() as AnySchema);
         }
         if (terminate !== undefined) {
             this.terminate = terminate;

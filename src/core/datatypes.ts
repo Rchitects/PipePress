@@ -10,7 +10,7 @@ export type Infer<T> = T extends DataType<any> ? ReturnType<T["validate"]> : und
 type Constructor<T> = { new(): T };
 
 /*** support functions ***/
-export function isIsoDate(str: any): boolean {
+export function isIsoDate(str: string): boolean {
     if (str === null || str === undefined) return false;
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(str);
 }
@@ -59,9 +59,15 @@ class NumberType extends DataType<number> {
         return { type: 'number' };
     }
     validate(value: any): number {
-        let tmp = parseFloat(value);
-        if (isNaN(tmp)) throw TypeError('is not a number');
-        return tmp;
+        if (typeof value === 'number') {
+            return value;
+        }
+        else if (typeof value === 'string') {
+            const tmp = parseFloat(value);
+            if (isNaN(tmp)) throw TypeError('is not a number');
+            return tmp;
+        }
+        throw TypeError('is not a number');
     }
 }
 class BooleanType extends DataType<boolean> {
@@ -71,7 +77,7 @@ class BooleanType extends DataType<boolean> {
     validate(value: any): boolean {
         if (typeof value === 'boolean') return value;
         /* try parse 'true' / 'false' */
-        let boolStr = String(value).toLowerCase();
+        const boolStr = String(value).toLowerCase();
         if (boolStr === 'true') {
             return true;
         }
@@ -79,7 +85,7 @@ class BooleanType extends DataType<boolean> {
             return false;
         }
         /* try parsing into number to convert 0 or 1 to bool */
-        let boolNumber = parseFloat(value);
+        const boolNumber = parseFloat(boolStr);
         if (isNaN(boolNumber)) throw new TypeError('is not a boolean or boolean-like(0,1,true,false)');
         if (boolNumber === 0) {
             return false;
@@ -134,14 +140,14 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
                 parsed.push(this._itemValidator.validate(value[i]));
             } catch (e) {
                 // validate() will only throw TypeError
-                throw new TypeError(`element[${i}] ${(e as TypeError).message}`);
+                throw new TypeError(`element[${i}] ${(e as TypeError).message}`, { cause: e });
             }
         }
         return parsed;
     }
 
     of<T extends TItem = TItem>(itemValidator: DataType<T, boolean>): ArrayType<T> {
-        (this as unknown as any)._itemValidator = itemValidator;
+        this._itemValidator = itemValidator;
         return this as unknown as ArrayType<T>;
     }
 }
@@ -189,11 +195,11 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
                 }
             } catch (e) {
                 // validate() will only throw TypeError
-                throw new TypeError(`${key} ${(e as TypeError).message}`);
+                throw new TypeError(`${key} ${(e as TypeError).message}`, { cause: e });
             }
         }
 
-        return result;
+        return result as ParsedSchema<TSchema>;
     }
 
     extend<ExtSchema extends SchemaDefinition>(schema: ExtSchema): ObjectType<TSchema & ExtSchema> {
@@ -216,11 +222,11 @@ class LiteralType<T extends string | number> extends DataType<T> {
     }
 
     validate(value: any): T {
-        const parsed = this.#validator.validate(value);
+        const parsed = this.#validator.validate(value) as T;
         if (!this.#values.includes(parsed)) {
             throw new TypeError(`must be one of: ${this.#values.map(v => `'${v}'`).join(' | ')}`);
         }
-        return parsed as T;
+        return parsed;
     }
 }
 /*** helper functions ***/
