@@ -142,6 +142,6 @@ describe('PipePress basic functions', () => {
         const app2 = new PipePress();
         app2.build();
 
-        expect(() => app2.listen(PORT)).rejects.toThrowError('EADDRINUSE');
+        await expect(() => app2.listen(PORT)).rejects.toThrowError('EADDRINUSE');
     });
 });
