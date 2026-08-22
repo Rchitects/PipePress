@@ -20,7 +20,7 @@ type StrictParamsSchema<Path extends string> = {
 };
 type InferParams<Path extends string, Opts extends RouteOptions<Path>> =
     ExtractParamNames<Path> extends never
-    ? {}                                                        // no params in path
+    ? Record<string, never>                                     // no params in path
     : Opts["params"] extends ObjectType<infer TSchema, any>
     ? ParsedSchema<TSchema>                                     // params definied with validation
     : { [K in ExtractParamNames<Path>]: string };               // raw params
@@ -30,15 +30,16 @@ type RouteParams<Path extends string> =
     : ObjectType<StrictParamsSchema<Path>, false>;
 
 /*** state ***/
-type StageState<S> = S extends PipeStage<any, infer State> ? State : {};
+export type UnknownState = Record<string, unknown>;
+type StageState<S> = S extends PipeStage<any, infer State> ? State : UnknownState;
 type StateFromStages<T extends readonly PipeStage<any, any>[]> =
     T extends readonly [infer Head extends PipeStage<any, any>, ...infer Tail extends PipeStage<any, any>[]]
     ? StageState<Head> & StateFromStages<Tail>
-    : {};
+    : UnknownState;
 export type InferStateFromOpts<Opts> =
     Opts extends { stages: infer S extends readonly PipeStage<any, any>[] }
     ? StateFromStages<S>
-    : {};
+    : UnknownState;
 /*** router types ***/
 export const HTTPMethod = [
     "GET",
@@ -72,9 +73,9 @@ export type PipeResponse<Body = any> = {
     contentType?: HTTPContentType;
     terminate?: boolean;
 }
-export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = {}> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
-export type PipeStage<Res, State = {}> = {
+export type PipeStageHandler<Res, State = UnknownState> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = UnknownState> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
+export type PipeStage<Res, State = UnknownState> = {
     handler: PipeStageHandler<Res, State>;
     runBeforeParse?: boolean;
     serializer?: stringyfy<Res>;

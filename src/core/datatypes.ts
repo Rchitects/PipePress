@@ -34,8 +34,8 @@ export abstract class DataType<T, Optional extends boolean = false> {
     }
 
     /* validation */
-    abstract validate(value: any): T;
-    validateRequired(key: string, value: any): boolean {
+    abstract validate(value: unknown): T;
+    validateRequired(key: string, value: object): boolean {
         if (!this.optional && !(key in value)) throw new TypeError(`is required`);
         return true;
     }
@@ -48,7 +48,7 @@ class StringType extends DataType<string> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'string' };
     }
-    validate(value: any): string {
+    validate(value: unknown): string {
         if (typeof value !== 'string') throw new TypeError('is not a string');
         if (value.length === 0) throw new TypeError('String length is zero (0)');
         return String(value);
@@ -58,7 +58,7 @@ class NumberType extends DataType<number> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'number' };
     }
-    validate(value: any): number {
+    validate(value: unknown): number {
         if (typeof value === 'number') {
             return value;
         }
@@ -74,7 +74,7 @@ class BooleanType extends DataType<boolean> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'boolean' };
     }
-    validate(value: any): boolean {
+    validate(value: unknown): boolean {
         if (typeof value === 'boolean') return value;
         /* try parse 'true' / 'false' */
         const boolStr = String(value).toLowerCase();
@@ -101,7 +101,7 @@ class DateType extends DataType<Date> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'string', format: 'date-time' }
     }
-    validate(value: any): Date {
+    validate(value: unknown): Date {
         /* pure date */
         if (value instanceof Date) {
             return value;
@@ -130,7 +130,7 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
             items: this._itemValidator ? this._itemValidator.toJSONSchema() : {}
         };
     }
-    validate(value: any): TItem[] {
+    validate(value: unknown): TItem[] {
         if (!Array.isArray(value)) throw new TypeError('is not an array');
         if (!this._itemValidator) return value.slice() as TItem[];
 
@@ -175,22 +175,23 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
         return schema;
     }
 
-    validate(value: any): ParsedSchema<TSchema> {
+    validate(value: unknown): ParsedSchema<TSchema> {
         if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
             throw new TypeError('is not an object');
         }
 
         /* loop through entrys (keys) and validate / parsed them */
-        const result: any = {};
+        const valAsObj = value as Record<string, unknown>;
+        const result: Record<string, unknown> = {};
 
         for (const key in this.#schema) {
             const curSchema = this.#schema[key];
 
             try {
-                curSchema.validateRequired(key, value);
+                curSchema.validateRequired(key, valAsObj);
 
-                if (key in value) {
-                    const parsed = curSchema.validate(value[key]);
+                if (key in valAsObj) {
+                    const parsed = curSchema.validate(valAsObj[key]);
                     result[key] = parsed;
                 }
             } catch (e) {
@@ -221,7 +222,7 @@ class LiteralType<T extends string | number> extends DataType<T> {
         return { enum: [...this.#values] };
     }
 
-    validate(value: any): T {
+    validate(value: unknown): T {
         const parsed = this.#validator.validate(value) as T;
         if (!this.#values.includes(parsed)) {
             throw new TypeError(`must be one of: ${this.#values.map(v => `'${v}'`).join(' | ')}`);

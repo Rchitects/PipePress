@@ -1,8 +1,8 @@
 /*** imports ***/
-import fastJSON from "fast-json-stringify";
+import fastJSON, { Schema } from "fast-json-stringify";
 import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser";
-import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
 import { EventMap, Notifier } from "./eventNotifier";
+import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, UnknownState, stringyfy } from "./models";
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -10,7 +10,7 @@ const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
 }
 
 /*** class ***/
-export class Router<GlobalState = {}, Events extends EventMap = {}> extends Notifier<Events> {
+export class Router<GlobalState extends UnknownState = UnknownState, Events extends EventMap = EventMap> extends Notifier<Events> {
     /*** variables ***/
     protected _stages: PipeStage<any, any>[] = [];
     protected _routes: Route<any>[] = [];
@@ -28,13 +28,13 @@ export class Router<GlobalState = {}, Events extends EventMap = {}> extends Noti
         let serializer: stringyfy<any> = JSON.stringify;
         if (optionsOrHandler.response) {
             const schema = optionsOrHandler.response.toJSONSchema();
-            serializer = fastJSON(schema as any);   // fast-json-stringify types are equal to JSONSchema7 but defintion is diffrent
+            serializer = fastJSON(schema as Schema);   // fast-json-stringify types are equal to JSONSchema7 but defintion is diffrent
         }
         /* create route */
         this._routes.push({
             method: method,
             path: path,
-            handler: handler!,
+            handler: handler,
             stages: optionsOrHandler.stages,
             body: optionsOrHandler.body,
             serializer: serializer,

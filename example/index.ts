@@ -222,7 +222,7 @@ function createDemoApp() {
         message: dt.String(),
         path: dt.String(),
     }));
-
+    
     return app;
 }
 
