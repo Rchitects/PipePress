@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { DataType, ObjectType, Infer, SchemaDefinition, ParsedSchema } from "./datatypes";
+import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes";
 
 /*** definitions ***/
 export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
@@ -16,12 +16,12 @@ type ExtractParamNames<Path extends string> =
     ? Param
     : never;
 type StrictParamsSchema<Path extends string> = {
-    [K in ExtractParamNames<Path>]: DataType<any, false>
+    [K in ExtractParamNames<Path>]: DataType<unknown, false>
 };
 type InferParams<Path extends string, Opts extends RouteOptions<Path>> =
     ExtractParamNames<Path> extends never
     ? Record<string, never>                                     // no params in path
-    : Opts["params"] extends ObjectType<infer TSchema, any>
+    : Opts["params"] extends ObjectType<infer TSchema, boolean>
     ? ParsedSchema<TSchema>                                     // params definied with validation
     : { [K in ExtractParamNames<Path>]: string };               // raw params
 type RouteParams<Path extends string> =
@@ -31,7 +31,7 @@ type RouteParams<Path extends string> =
 
 /*** state ***/
 export type UnknownState = Record<string, unknown>;
-type StageState<S> = S extends PipeStage<any, infer State> ? State : UnknownState;
+type StageState<S> = S extends PipeStage<unknown, infer State> ? State : UnknownState;
 type StateFromStages<T extends readonly PipeStage<any, any>[]> =
     T extends readonly [infer Head extends PipeStage<any, any>, ...infer Tail extends PipeStage<any, any>[]]
     ? StageState<Head> & StateFromStages<Tail>
@@ -86,7 +86,7 @@ export type Route<Path extends string> = {
     handler: PipeRouteHandler<Path, any, any>;
     serializer: stringyfy<any>;
     stages?: PipeStage<any, any>[];
-    body?: DataType<any, boolean>;
+    body?: ObjectType;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
     params?: RouteParams<Path>;
@@ -99,13 +99,13 @@ export type RouteOptions<
     Stages extends readonly PipeStage<any, any>[] = PipeStage<any, any>[]
 > = {
     params?: RouteParams<Path>,
-    query?: ObjectType<any, boolean>;
-    body?: DataType<any, boolean>;
+    query?: ObjectType;
+    body?: ObjectType;
     files?: Record<string, FileOption>;
-    response?: DataType<any, boolean>;
+    response?: ObjectType;
     stages?: Stages;
     contentType?: HTTPContentType;
-    cookies?: ObjectType<any, boolean>;
+    cookies?: ObjectType;
     bodyLimit?: number;
 };
 export type FileUpload = {

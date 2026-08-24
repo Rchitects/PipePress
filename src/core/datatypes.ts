@@ -2,11 +2,11 @@
 import { JSONSchema7 } from "json-schema";
 
 /*** types ***/
-export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<any, Optional>>;
+export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<unknown, Optional>>;
 export type ParsedSchema<T extends SchemaDefinition> =
-    { [K in keyof T as T[K] extends DataType<any, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
-    { [K in keyof T as T[K] extends DataType<any, true> ? never : K]: ReturnType<T[K]["validate"]> };
-export type Infer<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
+    { [K in keyof T as T[K] extends DataType<unknown, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
+    { [K in keyof T as T[K] extends DataType<unknown, true> ? never : K]: ReturnType<T[K]["validate"]> };
+export type Infer<T> = T extends DataType<unknown> ? ReturnType<T["validate"]> : undefined;
 type Constructor<T> = { new(): T };
 
 /*** support functions ***/
@@ -27,16 +27,17 @@ function literalValidator<P extends string | number>(validator: Constructor<Data
 /*** basic validation type ***/
 export abstract class DataType<T, Optional extends boolean = false> {
     /* optional flag */
-    optional: Optional = false as Optional;
+    #optional: Optional = false as Optional;
+    get optional(): Optional { return this.#optional };
     isOptional(): DataType<T, true> {
-        this.optional = true as Optional;
+        this.#optional = true as Optional;
         return this as unknown as DataType<T, true>;
     }
 
     /* validation */
     abstract validate(value: unknown): T;
     validateRequired(key: string, value: object): boolean {
-        if (!this.optional && !(key in value)) throw new TypeError(`is required`);
+        if (!this.#optional && !(key in value)) throw new TypeError(`is required`);
         return true;
     }
     /* schema */
@@ -151,7 +152,7 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
         return this as unknown as ArrayType<T>;
     }
 }
-export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
+export class ObjectType<TSchema extends SchemaDefinition = SchemaDefinition, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
     #schema: TSchema;
 
     constructor(schema: TSchema) {
