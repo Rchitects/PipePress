@@ -2,15 +2,15 @@
 import { JSONSchema7 } from "json-schema";
 
 /*** types ***/
-export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<any, Optional>>;
+export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<unknown, Optional>>;
 export type ParsedSchema<T extends SchemaDefinition> =
-    { [K in keyof T as T[K] extends DataType<any, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
-    { [K in keyof T as T[K] extends DataType<any, true> ? never : K]: ReturnType<T[K]["validate"]> };
-export type Infer<T> = T extends DataType<any> ? ReturnType<T["validate"]> : undefined;
+    { [K in keyof T as T[K] extends DataType<unknown, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
+    { [K in keyof T as T[K] extends DataType<unknown, true> ? never : K]: ReturnType<T[K]["validate"]> };
+export type Infer<T> = T extends DataType<unknown> ? ReturnType<T["validate"]> : undefined;
 type Constructor<T> = { new(): T };
 
 /*** support functions ***/
-export function isIsoDate(str: any): boolean {
+export function isIsoDate(str: string): boolean {
     if (str === null || str === undefined) return false;
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(str);
 }
@@ -27,16 +27,17 @@ function literalValidator<P extends string | number>(validator: Constructor<Data
 /*** basic validation type ***/
 export abstract class DataType<T, Optional extends boolean = false> {
     /* optional flag */
-    optional: Optional = false as Optional;
+    #optional: Optional = false as Optional;
+    get optional(): Optional { return this.#optional };
     isOptional(): DataType<T, true> {
-        this.optional = true as Optional;
+        this.#optional = true as Optional;
         return this as unknown as DataType<T, true>;
     }
 
     /* validation */
-    abstract validate(value: any): T;
-    validateRequired(key: string, value: any): boolean {
-        if (!this.optional && !(key in value)) throw new TypeError(`is required`);
+    abstract validate(value: unknown): T;
+    validateRequired(key: string, value: object): boolean {
+        if (!this.#optional && !(key in value)) throw new TypeError(`is required`);
         return true;
     }
     /* schema */
@@ -48,7 +49,7 @@ class StringType extends DataType<string> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'string' };
     }
-    validate(value: any): string {
+    validate(value: unknown): string {
         if (typeof value !== 'string') throw new TypeError('is not a string');
         if (value.length === 0) throw new TypeError('String length is zero (0)');
         return String(value);
@@ -58,20 +59,26 @@ class NumberType extends DataType<number> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'number' };
     }
-    validate(value: any): number {
-        let tmp = parseFloat(value);
-        if (isNaN(tmp)) throw TypeError('is not a number');
-        return tmp;
+    validate(value: unknown): number {
+        if (typeof value === 'number') {
+            return value;
+        }
+        else if (typeof value === 'string') {
+            const tmp = parseFloat(value);
+            if (isNaN(tmp)) throw TypeError('is not a number');
+            return tmp;
+        }
+        throw TypeError('is not a number');
     }
 }
 class BooleanType extends DataType<boolean> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'boolean' };
     }
-    validate(value: any): boolean {
+    validate(value: unknown): boolean {
         if (typeof value === 'boolean') return value;
         /* try parse 'true' / 'false' */
-        let boolStr = String(value).toLowerCase();
+        const boolStr = String(value).toLowerCase();
         if (boolStr === 'true') {
             return true;
         }
@@ -79,7 +86,7 @@ class BooleanType extends DataType<boolean> {
             return false;
         }
         /* try parsing into number to convert 0 or 1 to bool */
-        let boolNumber = parseFloat(value);
+        const boolNumber = parseFloat(boolStr);
         if (isNaN(boolNumber)) throw new TypeError('is not a boolean or boolean-like(0,1,true,false)');
         if (boolNumber === 0) {
             return false;
@@ -95,7 +102,7 @@ class DateType extends DataType<Date> {
     toJSONSchema(): JSONSchema7 {
         return { type: 'string', format: 'date-time' }
     }
-    validate(value: any): Date {
+    validate(value: unknown): Date {
         /* pure date */
         if (value instanceof Date) {
             return value;
@@ -124,7 +131,7 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
             items: this._itemValidator ? this._itemValidator.toJSONSchema() : {}
         };
     }
-    validate(value: any): TItem[] {
+    validate(value: unknown): TItem[] {
         if (!Array.isArray(value)) throw new TypeError('is not an array');
         if (!this._itemValidator) return value.slice() as TItem[];
 
@@ -134,18 +141,18 @@ class ArrayType<TItem = any> extends DataType<TItem[]> {
                 parsed.push(this._itemValidator.validate(value[i]));
             } catch (e) {
                 // validate() will only throw TypeError
-                throw new TypeError(`element[${i}] ${(e as TypeError).message}`);
+                throw new TypeError(`element[${i}] ${(e as TypeError).message}`, { cause: e });
             }
         }
         return parsed;
     }
 
     of<T extends TItem = TItem>(itemValidator: DataType<T, boolean>): ArrayType<T> {
-        (this as unknown as any)._itemValidator = itemValidator;
+        this._itemValidator = itemValidator;
         return this as unknown as ArrayType<T>;
     }
 }
-export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
+export class ObjectType<TSchema extends SchemaDefinition = SchemaDefinition, Optional extends boolean = false> extends DataType<ParsedSchema<TSchema>, Optional> {
     #schema: TSchema;
 
     constructor(schema: TSchema) {
@@ -169,31 +176,32 @@ export class ObjectType<TSchema extends SchemaDefinition = any, Optional extends
         return schema;
     }
 
-    validate(value: any): ParsedSchema<TSchema> {
+    validate(value: unknown): ParsedSchema<TSchema> {
         if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
             throw new TypeError('is not an object');
         }
 
         /* loop through entrys (keys) and validate / parsed them */
-        const result: any = {};
+        const valAsObj = value as Record<string, unknown>;
+        const result: Record<string, unknown> = {};
 
         for (const key in this.#schema) {
             const curSchema = this.#schema[key];
 
             try {
-                curSchema.validateRequired(key, value);
+                curSchema.validateRequired(key, valAsObj);
 
-                if (key in value) {
-                    const parsed = curSchema.validate(value[key]);
+                if (key in valAsObj) {
+                    const parsed = curSchema.validate(valAsObj[key]);
                     result[key] = parsed;
                 }
             } catch (e) {
                 // validate() will only throw TypeError
-                throw new TypeError(`${key} ${(e as TypeError).message}`);
+                throw new TypeError(`${key} ${(e as TypeError).message}`, { cause: e });
             }
         }
 
-        return result;
+        return result as ParsedSchema<TSchema>;
     }
 
     extend<ExtSchema extends SchemaDefinition>(schema: ExtSchema): ObjectType<TSchema & ExtSchema> {
@@ -215,12 +223,12 @@ class LiteralType<T extends string | number> extends DataType<T> {
         return { enum: [...this.#values] };
     }
 
-    validate(value: any): T {
-        const parsed = this.#validator.validate(value);
+    validate(value: unknown): T {
+        const parsed = this.#validator.validate(value) as T;
         if (!this.#values.includes(parsed)) {
             throw new TypeError(`must be one of: ${this.#values.map(v => `'${v}'`).join(' | ')}`);
         }
-        return parsed as T;
+        return parsed;
     }
 }
 /*** helper functions ***/

@@ -1,7 +1,7 @@
 /*** imports ***/
 import { TooManyRequestsPipeErr } from "../core/error";
 import { PipeStage } from "../core/models";
-import { getIP, sleep } from "../core/utils";
+import { getIP } from "../core/utils";
 
 /*** types ***/
 type BucketRecord = {
@@ -42,7 +42,7 @@ export const rateLimiter = (config?: RateLimitConfig): PipeStage<void> => {
     }
     /* create stage */
     return {
-        handler: async (ctx) => {
+        handler: (ctx) => {
             const now = Date.now();
             const IP = getIP(ctx.req);
 

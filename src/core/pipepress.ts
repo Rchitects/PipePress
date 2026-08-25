@@ -1,13 +1,14 @@
 /*** imports ***/
-import fastJSON from "fast-json-stringify";
+import fastJSON, { Schema } from "fast-json-stringify";
 import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
+import inject from "light-my-request";
+import { AddressInfo } from "net";
 import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
-import { InternalPipeErr, RouteNotFoundPipeErr, PipeError } from "./error";
+import { InternalPipeErr, PipeError, RouteNotFoundPipeErr } from "./error";
+import { AnyPipeStage, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models";
 import { Router } from "./router";
-import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler } from "./models";
-import inject from "light-my-request";
 import { isPipeResponse, pipeResponse, setCookie } from "./utils";
 
 /*** types ***/
@@ -24,12 +25,12 @@ const DEFAULT_CORS_CONFIG: Required<PipeCORSConfig> = {
 }
 
 /*** class ***/
-export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEvents> {
+export class PipePress<GlobalState extends UnknownState = UnknownState> extends Router<GlobalState, PipePressEvents> {
     /*** varbs ***/
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _notFoundCustom: PipeStage<any, any> | undefined;
+    private _notFoundCustom: AnyPipeStage | undefined;
     private _pipePressConfig: PipePressConfig;
     private _allowedMethods: Record<string, Set<HTTPMethod>> = {};
 
@@ -85,7 +86,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, _searchParams) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params);
-                const state = {} as any;
+                const state: UnknownState = {};
                 /* start executing all stages & handler */
                 try {
                     /* run CORS stage if needed */
@@ -137,13 +138,22 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                             if (files) {
                                 for (const file of files) {
                                     /* async delete the file */
-                                    import('fs').then(fs => {
-                                        fs.unlink(file.path, (err) => {
-                                            if (err) {
-                                                this._emit('unlink_failed', file.path, err);
+                                    import('fs')
+                                        .then(fs => {
+                                            fs.unlink(file.path, (err) => {
+                                                if (err) {
+                                                    this._emit('unlink_failed', file.path, err);
+                                                }
+                                            });
+                                        })
+                                        .catch((reason) => {
+                                            if (reason instanceof Error) {
+                                                this._emit('unlink_failed', file.path, reason);
                                             }
-                                        });
-                                    });
+                                            else {
+                                                this._emit('unlink_failed', file.path, new Error('Unable to import fs module'));
+                                            }
+                                        })
                                 }
                             }
                         }
@@ -151,13 +161,13 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                     /* make sure socket is finished */
                     this._cleanupSocket(ctx);
                 }
-            }, { pattern: route.path } as RouteStore);
+            }, { pattern: route.path });
         }
 
         this._build = true;
     }
 
-    listen(port: number): Promise<void> {
+    listen(port: number): Promise<number> {
         return new Promise((resolve, reject) => {
             if (!this._build) reject(new Error('build() was not called'));
             if (this._server) reject(new Error('server is already running'));
@@ -166,7 +176,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             this._server = http.createServer((req, res) => {
                 this._handleRequest(req, res);
             });
-            
+
             /* setup startup-error handler */
             this._server.once('error', (err) => {
                 reject(err);
@@ -186,7 +196,8 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
                 });
 
                 /* finish startup */
-                resolve();
+                const port = (this._server!.address() as AddressInfo).port;
+                resolve(port);
             });
         });
     }
@@ -209,12 +220,12 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
     }
 
     // TODO: remove serializer in the PipeStageHandler response?
-    setNotFoundHandler<T, Extra = {}>(handler: PipeStageHandler<T, Extra>, response?: DataType<T, boolean>) {
-        const notFoundStage: PipeStage<T, Extra> = {
+    setNotFoundHandler<T>(handler: PipeStageHandler<T, GlobalState>, response?: DataType<T, boolean>) {
+        const notFoundStage: PipeStage<T, GlobalState> = {
             handler: handler
         };
         if (response) {
-            notFoundStage.serializer = fastJSON(response.toJSONSchema() as any);
+            notFoundStage.serializer = fastJSON(response.toJSONSchema() as Schema);
         }
         this._notFoundCustom = notFoundStage;
     }
@@ -264,7 +275,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         }
         else {
             /* call not-Found handler */
-            this._handleNotFound(req, res);
+            void this._handleNotFound(req, res);
         }
     }
     private _createContext(req: http.IncomingMessage, res: http.ServerResponse, params: ParamsType): PipeContext<any, any> {
@@ -288,7 +299,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         };
         return ctx;
     }
-    private _sendResponse(ctx: PipeContext<any, any>, result: PipeResponse) {
+    private _sendResponse<Body>(ctx: PipeContext<any, any>, result: PipeResponse<Body>) {
         if (ctx.res.headersSent) return;
         /* set status */
         ctx.res.statusCode = result.status;
@@ -315,18 +326,19 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         const contentType: HTTPContentType = result.contentType || 'application/json';
 
         /* create data */
-        let body: any;  // string or buffer
+        let body: string | Buffer;
         if (result.status === HTTPStatus.NO_CONTENT) {
             return ctx.res.end();
         }
         else if (contentType !== 'application/json') {
             ctx.res.setHeader('Content-Type', contentType);
-            body = result.body;
+            // TODO: check if string or Buffer
+            body = (result.body as string | Buffer | undefined) ?? '';
         }
         else {
             /* TODO: allow other content types */
-            ctx.res.setHeader('Content-Type', 'application/json' as HTTPContentType);
-            body = result.serializer ? result.serializer(result.body) : JSON.stringify(result.body);
+            ctx.res.setHeader('Content-Type', 'application/json');
+            body = result.serializer ? result.serializer(result.body!) : JSON.stringify(result.body);
         }
         /* send body / responst */
         ctx.res.end(body);
@@ -338,7 +350,7 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
             });
         }
     }
-    private _handleError(e: any, ctx: PipeContext<any, any>) {
+    private _handleError(e: unknown, ctx: PipeContext<any, any>) {
         // TODO: add custome error handler?
         try {
             if (e instanceof PipeError) {
@@ -355,14 +367,14 @@ export class PipePress<GlobalState = {}> extends Router<GlobalState, PipePressEv
         }
         catch (e) {
             /* double failer emit error */
-            let err = e instanceof Error ? e : new Error(`${e}`);
+            const err = e instanceof Error ? e : new Error(String(e));
             this._emit('unable_to_response', err);
         }
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
         /* create context for this route */
         const ctx = this._createContext(req, res, {});
-        const state = {} as any;
+        const state: UnknownState = {};
         /* start executing all global stages */
         try {
             /* stages */

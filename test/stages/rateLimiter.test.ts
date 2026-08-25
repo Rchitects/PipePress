@@ -5,6 +5,7 @@ import autocannon from "autocannon";
 
 /*** varbs ***/
 let app: PipePress;
+let port = 0;
 
 /*** test ***/
 describe("Rate Limiter Stage", () => {
@@ -18,7 +19,7 @@ describe("Rate Limiter Stage", () => {
         });
 
         app.build();
-        await app.listen(4000);
+        port = await app.listen(0);
     });
 
     afterAll(() => {
@@ -26,7 +27,7 @@ describe("Rate Limiter Stage", () => {
     });
 
     it("should use x-forwarded-for header for IP", async () => {
-        const res = await fetch("http://localhost:4000/ping", {
+        const res = await fetch(`http://localhost:${port}/ping`, {
             headers: {
                 "x-forwarded-for": "1.2.3.4"
             }
@@ -38,7 +39,7 @@ describe("Rate Limiter Stage", () => {
     });
 
     it("should use x-forwarded-for header for IP with multiple IPs", async () => {
-        const res = await fetch("http://localhost:4000/ping", {
+        const res = await fetch(`http://localhost:${port}/ping`, {
             headers: {
                 "x-forwarded-for": "1.2.3.4, 5.6.7.8, 9.10.11.12"
             }
@@ -56,7 +57,7 @@ describe("Rate Limiter Stage", () => {
     //     };
 
     //     const result = await autocannon({
-    //         url: "http://localhost:4000/ping",
+    //         url: `http://localhost:${port}/ping`,
     //         connections: 20,
     //         duration: 3,
     //         amount: 100,
@@ -83,7 +84,7 @@ describe("Rate Limiter Stage", () => {
 
     //     // first 10 ok and 90 will fail
     //     const result = await autocannon({
-    //         url: "http://localhost:4000/ping",
+    //         url: `http://localhost:${port}/ping`,
     //         connections: 20,
     //         duration: 3,
     //         amount: 100,
@@ -102,7 +103,7 @@ describe("Rate Limiter Stage", () => {
     //     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     //     // than another requests which should be ok again
-    //     const result2 = await fetch("http://localhost:4000/ping");
+    //     const result2 = await fetch(`http://localhost:${port}/ping`);
     //     if (result2.status === 200) {
     //         stats.ok++;
     //     };

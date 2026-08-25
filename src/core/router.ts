@@ -1,8 +1,9 @@
 /*** imports ***/
-import fastJSON from "fast-json-stringify";
+import fastJSON, { Schema } from "fast-json-stringify";
 import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser";
-import type { HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, stringyfy } from "./models";
 import { EventMap, Notifier } from "./eventNotifier";
+import type { AnyPipeStage, AnyRoute, HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, UnknownState, stringyfy } from "./models";
+/*** types ***/
 
 /*** definition ***/
 const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
@@ -10,10 +11,10 @@ const DEFAULT_ROUTER_CONFIG: Required<PipeRouterConfig> = {
 }
 
 /*** class ***/
-export class Router<GlobalState = {}, Events extends EventMap = {}> extends Notifier<Events> {
+export class Router<GlobalState extends UnknownState = UnknownState, Events extends EventMap = EventMap> extends Notifier<Events> {
     /*** variables ***/
-    protected _stages: PipeStage<any, any>[] = [];
-    protected _routes: Route<any>[] = [];
+    protected _stages: AnyPipeStage[] = [];
+    protected _routes: AnyRoute[] = [];
     protected _children: { prefix: string, router: Router }[] = [];
     protected _routerConfig: Required<PipeRouterConfig>;
 
@@ -28,13 +29,13 @@ export class Router<GlobalState = {}, Events extends EventMap = {}> extends Noti
         let serializer: stringyfy<any> = JSON.stringify;
         if (optionsOrHandler.response) {
             const schema = optionsOrHandler.response.toJSONSchema();
-            serializer = fastJSON(schema as any);   // fast-json-stringify types are equal to JSONSchema7 but defintion is diffrent
+            serializer = fastJSON(schema as Schema);   // fast-json-stringify types are equal to JSONSchema7 but defintion is diffrent
         }
         /* create route */
         this._routes.push({
             method: method,
             path: path,
-            handler: handler!,
+            handler: handler,
             stages: optionsOrHandler.stages,
             body: optionsOrHandler.body,
             serializer: serializer,
@@ -58,7 +59,7 @@ export class Router<GlobalState = {}, Events extends EventMap = {}> extends Noti
         this._children.push({ prefix: path, router: router });
     }
 
-    collectRoutes(prefix: string = '', inheritedStages: PipeStage<any, any>[] = []): Route<any>[] {
+    collectRoutes(prefix: string = '', inheritedStages: PipeStage<any, any>[] = []): Route<string>[] {
         /* collect own routes */
         const routes: Route<any>[] = this._routes.map((route) => {
             /* build route pipeline

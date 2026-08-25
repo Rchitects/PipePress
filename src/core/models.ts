@@ -1,6 +1,7 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { DataType, ObjectType, Infer, SchemaDefinition, ParsedSchema } from "./datatypes";
+import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes";
+import { InjectPayload } from "light-my-request";
 
 /*** definitions ***/
 export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
@@ -16,29 +17,40 @@ type ExtractParamNames<Path extends string> =
     ? Param
     : never;
 type StrictParamsSchema<Path extends string> = {
-    [K in ExtractParamNames<Path>]: DataType<any, false>
+    [K in ExtractParamNames<Path>]: DataType<unknown, false>
 };
 type InferParams<Path extends string, Opts extends RouteOptions<Path>> =
     ExtractParamNames<Path> extends never
-    ? {}                                                        // no params in path
-    : Opts["params"] extends ObjectType<infer TSchema, any>
+    ? Record<string, never>                                     // no params in path
+    : Opts["params"] extends ObjectType<infer TSchema, boolean>
     ? ParsedSchema<TSchema>                                     // params definied with validation
     : { [K in ExtractParamNames<Path>]: string };               // raw params
 type RouteParams<Path extends string> =
     [ExtractParamNames<Path>] extends [never]
     ? never
     : ObjectType<StrictParamsSchema<Path>, false>;
-
+/*** response ***/
+export type PipeResponse<Body = unknown> = {
+    [PIPE_RESPONSE_BRAND]: true;
+    status: HTTPStatus;
+    body?: Body;
+    headers?: Record<string, string>;
+    cookies?: SetCookieEntry[];
+    serializer?: stringyfy<Body>;
+    contentType?: HTTPContentType;
+    terminate?: boolean;
+};
 /*** state ***/
-type StageState<S> = S extends PipeStage<any, infer State> ? State : {};
+export type UnknownState = Record<string, unknown>;
+type StageState<S> = S extends PipeStage<unknown, infer State> ? State : UnknownState;
 type StateFromStages<T extends readonly PipeStage<any, any>[]> =
     T extends readonly [infer Head extends PipeStage<any, any>, ...infer Tail extends PipeStage<any, any>[]]
     ? StageState<Head> & StateFromStages<Tail>
-    : {};
+    : UnknownState;
 export type InferStateFromOpts<Opts> =
     Opts extends { stages: infer S extends readonly PipeStage<any, any>[] }
     ? StateFromStages<S>
-    : {};
+    : UnknownState;
 /*** router types ***/
 export const HTTPMethod = [
     "GET",
@@ -62,19 +74,9 @@ export type PipeContext<Path extends string, Opts extends RouteOptions<Path>> = 
     rawCookies: Record<string, string>;
     rawBody: StringIfDefined<Opts["body"]>;
 }
-export type PipeResponse<Body = any> = {
-    [PIPE_RESPONSE_BRAND]: true,
-    status: HTTPStatus;
-    body?: Body;
-    headers?: Record<string, string>;
-    cookies?: SetCookieEntry[];
-    serializer?: stringyfy<Body>;
-    contentType?: HTTPContentType;
-    terminate?: boolean;
-}
-export type PipeStageHandler<Res, State = {}> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
-export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = {}> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
-export type PipeStage<Res, State = {}> = {
+export type PipeStageHandler<Res, State = UnknownState> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
+export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = UnknownState> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
+export type PipeStage<Res, State = UnknownState> = {
     handler: PipeStageHandler<Res, State>;
     runBeforeParse?: boolean;
     serializer?: stringyfy<Res>;
@@ -85,7 +87,7 @@ export type Route<Path extends string> = {
     handler: PipeRouteHandler<Path, any, any>;
     serializer: stringyfy<any>;
     stages?: PipeStage<any, any>[];
-    body?: DataType<any, boolean>;
+    body?: ObjectType;
     contentType?: HTTPContentType;
     files?: Record<string, FileOption>;
     params?: RouteParams<Path>;
@@ -98,13 +100,13 @@ export type RouteOptions<
     Stages extends readonly PipeStage<any, any>[] = PipeStage<any, any>[]
 > = {
     params?: RouteParams<Path>,
-    query?: ObjectType<any, boolean>;
-    body?: DataType<any, boolean>;
+    query?: ObjectType;
+    body?: ObjectType;
     files?: Record<string, FileOption>;
-    response?: DataType<any, boolean>;
+    response?: ObjectType;
     stages?: Stages;
     contentType?: HTTPContentType;
-    cookies?: ObjectType<any, boolean>;
+    cookies?: ObjectType;
     bodyLimit?: number;
 };
 export type FileUpload = {
@@ -126,7 +128,7 @@ export type InferFiles<T> =
 export type InferResponseType<Opts> =
     Opts extends { response: DataType<infer R, any> }
     ? R
-    : any;
+    : unknown;
 
 /*** reponse types ***/
 export const HTTPStatus = {
@@ -249,7 +251,7 @@ export type PipePressInjectOptions = {
     method: HTTPMethod;
     url: string;
     headers?: Record<string, string>;
-    body?: any;
+    body?: InjectPayload;
 }
 export type PipePressInjectResponse = {
     statusCode: number;
@@ -266,3 +268,9 @@ export type PipePressEvents = {
     error: [err: Error],
     clientError: [err: Error]
 }
+
+/***
+ * any types
+ */
+export type AnyPipeStage = PipeStage<any, any>;
+export type AnyRoute = Route<any>;
