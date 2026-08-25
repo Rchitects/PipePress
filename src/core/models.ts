@@ -1,6 +1,7 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
 import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes";
+import { InjectPayload } from "light-my-request";
 
 /*** definitions ***/
 export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
@@ -28,7 +29,17 @@ type RouteParams<Path extends string> =
     [ExtractParamNames<Path>] extends [never]
     ? never
     : ObjectType<StrictParamsSchema<Path>, false>;
-
+/*** response ***/
+export type PipeResponse<Body = unknown> = {
+    [PIPE_RESPONSE_BRAND]: true;
+    status: HTTPStatus;
+    body?: Body;
+    headers?: Record<string, string>;
+    cookies?: SetCookieEntry[];
+    serializer?: stringyfy<Body>;
+    contentType?: HTTPContentType;
+    terminate?: boolean;
+};
 /*** state ***/
 export type UnknownState = Record<string, unknown>;
 type StageState<S> = S extends PipeStage<unknown, infer State> ? State : UnknownState;
@@ -62,16 +73,6 @@ export type PipeContext<Path extends string, Opts extends RouteOptions<Path>> = 
     cookies: InferCookies<Opts["cookies"]>;
     rawCookies: Record<string, string>;
     rawBody: StringIfDefined<Opts["body"]>;
-}
-export type PipeResponse<Body = any> = {
-    [PIPE_RESPONSE_BRAND]: true,
-    status: HTTPStatus;
-    body?: Body;
-    headers?: Record<string, string>;
-    cookies?: SetCookieEntry[];
-    serializer?: stringyfy<Body>;
-    contentType?: HTTPContentType;
-    terminate?: boolean;
 }
 export type PipeStageHandler<Res, State = UnknownState> = (ctx: PipeContext<any, any>, state: State) => Promise<PipeResponse<Res> | void> | PipeResponse<Res> | void; // TODO: add missing types for ctx
 export type PipeRouteHandler<Path extends string, Opts extends RouteOptions<Path>, State = UnknownState> = (ctx: PipeContext<Path, Opts>, state: State) => MaybePromise<InferResponseType<Opts> | PipeResponse<any>>;
@@ -250,7 +251,7 @@ export type PipePressInjectOptions = {
     method: HTTPMethod;
     url: string;
     headers?: Record<string, string>;
-    body?: any;
+    body?: InjectPayload;
 }
 export type PipePressInjectResponse = {
     statusCode: number;
@@ -267,3 +268,9 @@ export type PipePressEvents = {
     error: [err: Error],
     clientError: [err: Error]
 }
+
+/***
+ * any types
+ */
+export type AnyPipeStage = PipeStage<any, any>;
+export type AnyRoute = Route<any>;

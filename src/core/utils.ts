@@ -31,15 +31,8 @@ export function isPipeResponse(value: unknown): value is PipeResponse {
         PIPE_RESPONSE_BRAND in value
     );
 }
-export function pipeResponse<Body = void>(opts: {
-    status: HTTPStatus;
-    body?: Body;
-    headers?: Record<string, string>;
-    serializer?: stringyfy<Body>;
-    contentType?: HTTPContentType;
-    cookies?: SetCookieEntry[];
-    terminate?: boolean;
-}): PipeResponse<Body> {
+type PipeResponseInput<Body> = Omit<PipeResponse<Body>, typeof PIPE_RESPONSE_BRAND>;
+export function pipeResponse<Body = undefined>(opts: PipeResponseInput<Body>): PipeResponse<Body> {
     return { [PIPE_RESPONSE_BRAND]: true, ...opts };
 }
 export function redirect(location: string, status: 301 | 302 | 303 | 307 | 308 = HTTPStatus.FOUND): PipeResponse<undefined> {

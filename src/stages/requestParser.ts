@@ -7,6 +7,7 @@ import path from "path";
 import { BadRequestPipeErr, ContentTooLargePipeErr, PipeError, ValidationPipeErr } from "../core/error";
 import { FileUpload, HTTPMethod, PipeContext, PipeStage, Route } from "../core/models";
 import { fastUUID, isArray, isContentType } from "../core/utils";
+import { IncomingMessage, ServerResponse } from "node:http";
 
 /*** types ***/
 type RequestParserOptions = {
@@ -325,7 +326,7 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
              * QUERY
              */
             if (ctx.query) {
-                ctx.query = normalizeQuery(ctx.query);
+                ctx.query = normalizeQuery(ctx.query as Record<string, string>);
             }
             if (route.query) {
                 /* parse and validate the parameter */
@@ -423,7 +424,7 @@ export const parseAndValidateRequestStage = (route: Route<any>, options: Request
                     try {
                         ctx.rawBody = rawData.toString('utf-8');
                         if (isContentType(contentType, 'application/json')) {
-                            ctx.body = JSON.parse(ctx.rawBody);
+                            ctx.body = JSON.parse(ctx.rawBody) as unknown;
                         }
                         else if (isContentType(contentType, 'application/x-www-form-urlencoded')) {
                             ctx.body = Object.fromEntries(new URLSearchParams(ctx.rawBody));

@@ -7,7 +7,7 @@ import { AddressInfo } from "net";
 import { voidStageHandler } from "../stages/voidStageHandler";
 import { DataType } from "./datatypes";
 import { InternalPipeErr, PipeError, RouteNotFoundPipeErr } from "./error";
-import { HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models";
+import { AnyPipeStage, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models";
 import { Router } from "./router";
 import { isPipeResponse, pipeResponse, setCookie } from "./utils";
 
@@ -30,7 +30,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
     private _server: http.Server | undefined;
-    private _notFoundCustom: PipeStage<any, any> | undefined;
+    private _notFoundCustom: AnyPipeStage | undefined;
     private _pipePressConfig: PipePressConfig;
     private _allowedMethods: Record<string, Set<HTTPMethod>> = {};
 
@@ -86,7 +86,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
             this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, _searchParams) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params);
-                const state = {} as any;
+                const state: UnknownState = {};
                 /* start executing all stages & handler */
                 try {
                     /* run CORS stage if needed */
@@ -299,7 +299,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         };
         return ctx;
     }
-    private _sendResponse(ctx: PipeContext<any, any>, result: PipeResponse) {
+    private _sendResponse<Body>(ctx: PipeContext<any, any>, result: PipeResponse<Body>) {
         if (ctx.res.headersSent) return;
         /* set status */
         ctx.res.statusCode = result.status;
@@ -326,18 +326,19 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         const contentType: HTTPContentType = result.contentType || 'application/json';
 
         /* create data */
-        let body: any;  // string or buffer
+        let body: string | Buffer;
         if (result.status === HTTPStatus.NO_CONTENT) {
             return ctx.res.end();
         }
         else if (contentType !== 'application/json') {
             ctx.res.setHeader('Content-Type', contentType);
-            body = result.body;
+            // TODO: check if string or Buffer
+            body = (result.body as string | Buffer | undefined) ?? '';
         }
         else {
             /* TODO: allow other content types */
             ctx.res.setHeader('Content-Type', 'application/json');
-            body = result.serializer ? result.serializer(result.body) : JSON.stringify(result.body);
+            body = result.serializer ? result.serializer(result.body!) : JSON.stringify(result.body);
         }
         /* send body / responst */
         ctx.res.end(body);
@@ -373,7 +374,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
         /* create context for this route */
         const ctx = this._createContext(req, res, {});
-        const state = {} as any;
+        const state: UnknownState = {};
         /* start executing all global stages */
         try {
             /* stages */
