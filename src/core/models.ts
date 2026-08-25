@@ -128,7 +128,7 @@ export type InferFiles<T> =
 export type InferResponseType<Opts> =
     Opts extends { response: DataType<infer R, any> }
     ? R
-    : any;
+    : unknown;
 
 /*** reponse types ***/
 export const HTTPStatus = {
