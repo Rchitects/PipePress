@@ -36,3 +36,6 @@ package-lock.json
 
 # ESLint
 .eslintcache
+
+# Benchmark
+benchmark-result.md
