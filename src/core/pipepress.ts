@@ -158,8 +158,6 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
                             }
                         }
                     }
-                    /* make sure socket is finished */
-                    this._cleanupSocket(ctx);
                 }
             }, { pattern: route.path });
         }
@@ -345,9 +343,9 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
 
         /* wait for finish to terminate if requested */
         if (result.terminate) {
-            ctx.res.on('finish', () => {
-                ctx.req.destroy();
-            });
+            const onDone = () => ctx.req.destroy();
+            ctx.res.once('finish', onDone);
+            ctx.res.once('close', onDone);
         }
     }
     private _handleError(e: unknown, ctx: PipeContext<any, any>) {
@@ -369,6 +367,11 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
             /* double failer emit error */
             const err = e instanceof Error ? e : new Error(String(e));
             this._emit('unable_to_response', err);
+
+            /* make sure socket is closed */
+            if(ctx.res.socket && !ctx.res.socket.destroyed){
+                ctx.res.socket.destroy();
+            }
         }
     }
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -412,10 +415,6 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         catch (e) {
             this._handleError(e, ctx);
         }
-        finally {
-            /* make sure socket is finished */
-            this._cleanupSocket(ctx);
-        }
     }
     private _corsStageHandler(ctx: PipeContext<any, any>, path: string) {
         /* ORIGIN */
@@ -429,11 +428,6 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         const allowedHeaders = ctx.req.headers['access-control-request-headers']; // TODO: make configurable
         if (allowedHeaders && allowedHeaders.length > 0) {
             ctx.res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
-        }
-    }
-    private _cleanupSocket(ctx: PipeContext<any, any>) {
-        if (ctx.res.socket && !ctx.res.socket.destroyed) {
-            ctx.res.socket.destroy();
         }
     }
 }

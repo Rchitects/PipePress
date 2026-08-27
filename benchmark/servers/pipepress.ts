@@ -2,6 +2,7 @@ import { PipePress } from "../../dist";
 import dt from "../../dist/core/datatypes";
 
 const app = new PipePress({ cors: { preflight: 'auto' } });
+const port = process.env.PORT || '3004';
 
 const schemaReq = dt.Object({ name: dt.String() });
 const schemaResp = dt.Object({ message: dt.String() });
@@ -11,7 +12,7 @@ app.post("/echo", { body: schemaReq, response: schemaResp }, async (ctx) => {
 });
 
 app.build();
-app.listen(3004)
+app.listen(+port)
     .then(() => {
-        process.send!("PipePress listening on 3004");
+        process.send?.("PipePress listening on " + port);
     });
