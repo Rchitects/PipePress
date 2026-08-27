@@ -5,6 +5,12 @@
 PipePress is a high-performance, Express-inspired Node.js web framework that replaces traditional middleware call stacks with precompiled request pipelines. It is designed for fast routing, modular stage composition, schema-based validation, and compact response serialization.
 
 [![Test and Build](https://github.com/Rchitects/PipePress/actions/workflows/test_build.yml/badge.svg)](https://github.com/Rchitects/PipePress/actions/workflows/test_build.yml)
+![Status](https://img.shields.io/badge/status-beta-yellow)
+<!-- When package is available uncomment this
+[![npm beta version](https://img.shields.io/npm/v/@rchitects/pipepress/beta)](https://www.npmjs.com/package/@rchitects/pipepress/v/beta)
+-->
+
+> ⚠️ **Beta:** PipePress is currently in beta phase
 
 ## Highlights
 - ⚡ Precompiled route pipelines for minimal dispatch overhead
@@ -16,6 +22,29 @@ PipePress is a high-performance, Express-inspired Node.js web framework that rep
 - 🌐 Automatic CORS preflight support
 - 🔍 Built-in helper stages: `basicHTTPLogger`, `rateLimiter`
 - 🧪 Inject testing support via `app.inject()`
+
+## Table of Contents
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+  - [App lifecycle](#app-lifecycle)
+  - [Router composition](#router-composition)
+  - [Route definitions](#route-definitions)
+  - [Built-in pipelines](#built-in-pipelines)
+- [Schema validation](#schema-validation)
+  - [Literal types](#literal-types)
+- [Response handling](#response-handling)
+  - [Cookie helpers](#cookie-helpers)
+- [Error handling](#error-handling)
+- [CORS support](#cors-support)
+- [Built-in stages](#built-in-stages)
+  - [basicHTTPLogger](#basichttplogger)
+  - [rateLimiter](#ratelimiter)
+- [Testing and injection](#testing-and-injection)
+- [Benchmark](#benchmark)
+- [Example project](#example-project)
+- [Future work](#future-work)
+- [License](#license)
 
 ## Installation
 
@@ -288,15 +317,12 @@ Useful demo endpoints include:
 
 Planned improvements and known limitations:
 - add a global custom error handler API
-- improve TypeScript route/stage typing and ctx type safety
 - extend route methods to support `HEAD`, `OPTIONS`, and other HTTP verbs explicitly
 - add Express-compatible middleware adapters
 - support streaming request bodies instead of buffering all payloads in memory
-- enforce multipart file limits and validate file upload metadata
 - make CORS origin/headers configuration more flexible
-- implement route-specific response headers on plain handler returns
 - add more integration and unit tests for edge cases
+- add websocket support
 
 ## License
 MIT
-
