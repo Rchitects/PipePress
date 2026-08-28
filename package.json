@@ -1,10 +1,13 @@
 {
   "name": "@rchitects/pipepress",
   "version": "0.14.0-beta.0",
-  "description": "",
+  "description": "A high-performance web framework for Node.js",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -25,14 +28,29 @@
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "express",
+    "fastify",
+    "typescript",
+    "framework",
+    "rest"
+  ],
+  "author": "Rchitects",
   "license": "ISC",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Rchitects/PipePress.git"
   },
   "type": "commonjs",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "fast-json-stringify": "^6.1.1",
+    "find-my-way": "^9.3.0",
+    "light-my-request": "^6.6.0"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@fastify/cors": "^11.1.0",
@@ -70,16 +88,7 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^4.0.5"
-  },
-  "files": [
-    "dist"
-  ],
-  "dependencies": {
-    "busboy": "^1.6.0",
-    "fast-json-stringify": "^6.1.1",
-    "find-my-way": "^9.3.0",
-    "light-my-request": "^6.6.0",
+    "vitest": "^4.0.5",
     "ts-node": "^10.9.2"
   }
 }
