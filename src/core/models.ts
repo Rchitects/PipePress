@@ -242,7 +242,20 @@ export type PipeRouterConfig = {
     maxBodyLength?: number;
 }
 export type PipeCORSConfig = {
+    /* preflight-handling: 'auto' will generate OPTIONS routes */
     preflight?: 'auto' | 'off';
+    /* allowed origins. Default '*' */
+    origin?: CorsOriging;
+    /* allow cookies / auth. headers cross-origin. Default. false */
+    credentials?: boolean;
+    /* allowed headers for preflight. Default: ['Content-Type', 'Authorization'] */
+    allowedHeaders?: string[];
+    /* response-header, which should be allowed to read by JS. Default: [] */
+    exposedHeaders?: string[];
+    /* cache-durationfor preflight in seconds. Default: 600 */
+    maxAge?: number;
+    /* override allowed methods */
+    methods?: HTTPMethod[];
 }
 export type PipePressConfig = PipeRouterConfig & {
     cors?: PipeCORSConfig
@@ -268,6 +281,12 @@ export type PipePressEvents = {
     error: [err: Error],
     clientError: [err: Error]
 }
+
+/*** CORS ***/
+export type CorsOriging =
+    | '*'
+    | string
+    | RegExp;
 
 /***
  * any types
