@@ -30,7 +30,7 @@ coverage/
 *.log
 
 # Optional: lockfiles (je nach Package Manager)
-package-lock.json
+# package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
 

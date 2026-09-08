@@ -33,14 +33,14 @@ jobs:
       - name: Install & build PR branch
         run: |
           cd pr-branch
-          npm install
+          npm ci
           npm run build
           npm run build:benchmark
 
       - name: Install & build main branch
         run: |
           cd main-branch
-          npm install
+          npm ci
           npm run build
           npm run build:benchmark
         continue-on-error: true
