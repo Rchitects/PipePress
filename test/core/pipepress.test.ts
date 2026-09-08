@@ -40,7 +40,9 @@ vi.mock('fs', async (importOriginal) => {
 
 describe('PipePress basic functions', () => {
     beforeAll(async () => {
-        app = new PipePress();
+        app = new PipePress({
+            cors: { preflight: 'auto' }
+        });
 
         /* route with mandorty file */
         app.post('/file-mandatory', {

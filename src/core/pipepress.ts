@@ -20,8 +20,13 @@ type RouteStore = {
 const DEFAULT_CONFIG: PipePressConfig = {
     maxBodyLength: 0,
 }
-const DEFAULT_CORS_CONFIG: Required<PipeCORSConfig> = {
-    preflight: 'auto'
+const DEFAULT_CORS_CONFIG: Required<Omit<PipeCORSConfig, 'methods'>> = {
+    preflight: 'auto',
+    origin: '*',
+    credentials: false,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: [],
+    maxAge: 600
 }
 
 /*** class ***/
@@ -44,6 +49,9 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         this._pipePressConfig = { ...DEFAULT_CONFIG, ...options };
         if (this._pipePressConfig.cors) {
             this._pipePressConfig.cors = { ...DEFAULT_CORS_CONFIG, ...this._pipePressConfig.cors };
+            if (this._pipePressConfig.cors.credentials && this._pipePressConfig.cors.origin === '*') {
+                throw new Error('CORS config error: "credentials: true" cannot be combined with "origin: "*".');
+            }
         }
     }
 
@@ -369,7 +377,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
             this._emit('unable_to_response', err);
 
             /* make sure socket is closed */
-            if(ctx.res.socket && !ctx.res.socket.destroyed){
+            if (ctx.res.socket && !ctx.res.socket.destroyed) {
                 ctx.res.socket.destroy();
             }
         }
@@ -417,17 +425,59 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
         }
     }
     private _corsStageHandler(ctx: PipeContext<any, any>, path: string) {
+        const cors = this._pipePressConfig.cors as Required<PipeCORSConfig>;
+        const reqOrigin = ctx.req.headers.origin;
+
         /* ORIGIN */
-        ctx.res.setHeader('Access-Control-Allow-Origin', '*');  // TODO: make configurable
+        const resOrigin = this._resolveOrigin(reqOrigin, cors, ctx);
+        if (!resOrigin) return;  // not allowed origin -> do not set CORS headers
+        ctx.res.setHeader('Access-Control-Allow-Origin', resOrigin);
+        if (resOrigin !== '*') {
+            /* cache has to checked per origin */
+            ctx.res.setHeader('Vary', 'Origin');
+        }
+
+        /* CREDENTILAS */
+        if (cors.credentials) {
+            ctx.res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+
         /* METHODS */
-        const allowedMethods = this._allowedMethods[path];
-        if (allowedMethods) {
-            ctx.res.setHeader('Access-Control-Allow-Methods', Array.from(allowedMethods).join(', '));
+        const allowedMethods = cors.methods ?? Array.from(this._allowedMethods[path] ?? []);
+        if (allowedMethods.length > 0) {
+            ctx.res.setHeader('Access-Control-Allow-Methods', allowedMethods.join(', '));
         }
+
         /* HEADERS */
-        const allowedHeaders = ctx.req.headers['access-control-request-headers']; // TODO: make configurable
-        if (allowedHeaders && allowedHeaders.length > 0) {
-            ctx.res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+        if (cors.allowedHeaders.length > 0) {
+            ctx.res.setHeader('Access-Control-Allow-Headers', cors.allowedHeaders.join(', '));
         }
+
+        /* EXPOSE */
+        if (cors.exposedHeaders.length > 0) {
+            ctx.res.setHeader('Access-Control-Expose-Headers', cors.exposedHeaders.join(', '));
+        }
+
+        /* MAX-AGE only for preflight */
+        if (ctx.req.method === 'OPTIONS') {
+            ctx.res.setHeader('Access-Control-Max-Age', String(cors.maxAge));
+        }
+    }
+    private _resolveOrigin(requestOrigin: string | undefined, cors: Required<PipeCORSConfig>, ctx: PipeContext<any, any>): string | null {
+        const { origin } = cors;
+
+        if (origin === '*') return '*';
+
+        if (!requestOrigin) return null;
+
+        if (typeof origin === 'string') {
+            return origin === requestOrigin ? requestOrigin : null;
+        }
+
+        if (origin instanceof RegExp) {
+            return origin.test(requestOrigin) ? requestOrigin : null;
+        }
+
+        return null;
     }
 }
