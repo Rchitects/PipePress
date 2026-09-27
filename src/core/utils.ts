@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieEntry, SetCookieOptions, stringyfy } from "./models";
+import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieOptions } from "./models.js";
 
 /*** functions ***/
 export function isContentType(source: string, ofType: HTTPContentType): boolean {

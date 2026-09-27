@@ -4,12 +4,12 @@ import findMyWay, { HTTPVersion } from "find-my-way";
 import * as http from "http";
 import inject from "light-my-request";
 import { AddressInfo } from "net";
-import { voidStageHandler } from "../stages/voidStageHandler";
-import { DataType } from "./datatypes";
-import { InternalPipeErr, PipeError, RouteNotFoundPipeErr } from "./error";
-import { AnyPipeStage, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models";
-import { Router } from "./router";
-import { isPipeResponse, pipeResponse, setCookie } from "./utils";
+import { voidStageHandler } from "../stages/voidStageHandler.js";
+import { DataType } from "./datatypes.js";
+import { InternalPipeErr, PipeError, RouteNotFoundPipeErr } from "./error.js";
+import { AnyPipeStage, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models.js";
+import { Router } from "./router.js";
+import { isPipeResponse, pipeResponse, setCookie } from "./utils.js";
 
 /*** types ***/
 type RouteStore = {

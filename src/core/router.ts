@@ -1,8 +1,9 @@
 /*** imports ***/
 import fastJSON, { Schema } from "fast-json-stringify";
-import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser";
-import { EventMap, Notifier } from "./eventNotifier";
-import type { AnyPipeStage, AnyRoute, HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, UnknownState, stringyfy } from "./models";
+import { BODY_LIMIT_DEFAULT, parseAndValidateRequestStage } from "../stages/requestParser.js";
+import { EventMap, Notifier } from "./eventNotifier.js";
+import type { AnyPipeStage, AnyRoute, HTTPMethod, InferStateFromOpts, PipeRouteHandler, PipeRouterConfig, PipeStage, Route, RouteOptions, UnknownState, stringyfy } from "./models.js";
+
 /*** types ***/
 
 /*** definition ***/

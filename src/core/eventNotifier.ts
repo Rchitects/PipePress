@@ -1,5 +1,5 @@
 /*** imports ***/
-import { EventEmitter } from "stream";
+import { EventEmitter } from "node:events";
 
 /*** types ***/
 export type EventMap = Record<string, unknown[]>;

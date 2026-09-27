@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes";
+import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes.js";
 import { InjectPayload } from "light-my-request";
 
 /*** definitions ***/

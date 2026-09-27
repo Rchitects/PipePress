@@ -1,8 +1,8 @@
 /*** imports ***/
 import fastJSON, { Schema } from "fast-json-stringify";
-import dt, { DataType } from "./datatypes";
-import { HTTPMethod, HTTPStatus, PipeResponse, stringyfy } from "./models";
-import { pipeResponse } from "./utils";
+import dt, { DataType } from "./datatypes.js";
+import { HTTPMethod, HTTPStatus, PipeResponse, stringyfy } from "./models.js";
+import { pipeResponse } from "./utils.js";
 
 /*** types for schemas ***/
 type PipeErrPayload = {
