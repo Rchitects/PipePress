@@ -1,5 +1,5 @@
-import { PipePress } from "../../dist";
-import dt from "../../dist/core/datatypes";
+import { PipePress } from "../../dist/index.js";
+import dt from "../../dist/core/datatypes.js";
 
 const app = new PipePress({ cors: { preflight: 'auto' } });
 const port = process.env.PORT || '3004';
