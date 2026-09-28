@@ -1,0 +1,27 @@
+{
+    "name": "@rchitects/pipepress-oauth",
+    "version": "0.1.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "type": "module",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "test": "vitest run"
+    },
+    "peerDependencies": {
+        "@rchitects/pipepress": "*"
+    },
+    "dependencies": {
+        "jsonwebtoken": "^9.0.0"
+    },
+    "devDependencies": {
+        "@rchitects/pipepress": "*",
+        "@types/jsonwebtoken": "^9.0.0",
+        "@types/node": "^26.6.3",
+        "typescript": "^5.9.3",
+        "vitest": "^5.0.2"
+    }
+}

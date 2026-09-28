@@ -1,7 +1,7 @@
 /*** imports ***/
-import { TooManyRequestsPipeErr } from "../core/error";
-import { PipeStage } from "../core/models";
-import { getIP } from "../core/utils";
+import { TooManyRequestsPipeErr } from "../core/error.js";
+import { PipeStage } from "../core/models.js";
+import { getIP } from "../core/utils.js";
 
 /*** types ***/
 type BucketRecord = {

@@ -1,6 +1,6 @@
 /*** imports ***/
-import { PipeStage } from "../core/models";
-import { fastUUID, getIP } from "../core/utils";
+import { PipeStage } from "../core/models.js";
+import { fastUUID, getIP } from "../core/utils.js";
 
 /*** types ***/
 type LogEntry = {

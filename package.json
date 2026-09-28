@@ -1,6 +1,6 @@
 {
   "name": "@rchitects/pipepress",
-  "version": "0.15.0-beta.0",
+  "version": "1.0.0",
   "description": "A high-performance web framework for Node.js",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -10,20 +10,36 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./datatypes": {
-      "import": "./dist/core/datatypes.mjs",
-      "require": "./dist/core/datatypes.js"
+      "import": {
+        "types": "./dist/core/datatypes.d.ts",
+        "default": "./dist/core/datatypes.js"
+      },
+      "require": {
+        "types": "./dist/core/datatypes.d.cts",
+        "default": "./dist/core/datatypes.cjs"
+      }
     }
   },
+  "workspaces": [
+    ".",
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsup",
     "build:benchmark": "tsc --project tsconfig.benchmark.json",
     "benchmark": "npm run build && npm run build:benchmark && node dist-benchmark/benchmark.js",
     "dev:example": "npm run build && npm run run:example",
-    "run:example": "ts-node example/index.ts",
+    "run:example": "tsx example/index.ts",
     "test": "vitest run",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache"
@@ -41,7 +57,7 @@
     "type": "git",
     "url": "git+https://github.com/Rchitects/PipePress.git"
   },
-  "type": "commonjs",
+  "type": "module",
   "files": [
     "dist"
   ],
@@ -86,9 +102,9 @@
     "reflect-metadata": "^0.2.2",
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.5.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^4.0.5",
-    "ts-node": "^10.9.2"
+    "vitest": "^4.0.5"
   }
 }
