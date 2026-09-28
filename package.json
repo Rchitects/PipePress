@@ -30,6 +30,10 @@
       }
     }
   },
+  "workspaces": [
+    ".",
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsup",
     "build:benchmark": "tsc --project tsconfig.benchmark.json",
