@@ -57,7 +57,7 @@ async function fetchJWKSConfig(jwksUri: string): Promise<JWKSConfig> {
 export function extractJWTToken(req: IncomingMessage): string {
     if (!req.headers.authorization) throw new BadRequestPipeErr('Authorization is missing');
     if (!req.headers.authorization.startsWith('Bearer ')) throw new BadRequestPipeErr('Invalid authorization header');
-    let token = req.headers.authorization.split(' ')[1];    // 'Bearer <token>' -> ['Bearer',<token>]
+    const token = req.headers.authorization.split(' ')[1];    // 'Bearer <token>' -> ['Bearer',<token>]
     if (token.length === 0) throw new BadRequestPipeErr('Corrupt authorization header');
     return token;
 };
@@ -76,8 +76,7 @@ export async function getPublicKey(kid: string): Promise<KeyObject> {
         throw new Error(`Unknown kid "${kid}" - next refresh allowed in ${Math.ceil((KEY_REFRESH_COOLDOWN_MS - (now - keyLastRefreshAt)) / 1000)
             }s`);
     }
-
-    console.warn(`[Auth] Unknown kid "${kid}", refreshing JWKS...`);
+    
     keyLastRefreshAt = now;
     await refreshKeyCache();
 

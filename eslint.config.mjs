@@ -15,7 +15,8 @@ export default tseslint.config(
             'eslint.config.mjs',
             'tsup.config.ts',
             'vitest.config.ts',
-            'test/**'
+            'test/**',
+            'packages/pipepress-oauth/dist/**'
         ],
     },
 
@@ -29,7 +30,8 @@ export default tseslint.config(
     {
         languageOptions: {
             parserOptions: {
-                project: './tsconfig.json',
+                // project: './tsconfig.json',
+                projectService: true,
                 tsconfigRootDir: import.meta.dirname,
             },
         },

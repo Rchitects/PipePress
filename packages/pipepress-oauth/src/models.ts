@@ -2,19 +2,14 @@ export interface UserRepo<User> {
     findBySub(sub: string): Promise<User | null>;
     createUser(userinfo: UserInfoClaims): Promise<User>;
 }
-export type OAuthConfigBase = {
-    issList: string[]
-}
-export type OAuthConfigSimple = OAuthConfigBase & {
-    userRepo?: undefined;
-}
-export type OAuthConfigWithUser<User> = OAuthConfigBase & {
+export type OAuthConfigWithUser<User> = {
     userRepo: UserRepo<User>
 }
 export type OAuthState = {
     userId: string;
     iss: string;
 }
+export type OAuthStateWithUser<User> = OAuthState & { user: User };
 export type OpenIDConfig = {
     issuer: string;
     jwks_uri: string;
@@ -41,4 +36,9 @@ export type UserInfoClaims = {
     middle_name?: string;
     preferred_username?: string;
     picture?: string;
+}
+export type ValidationResult = {
+    sub: string;
+    iss: string;
+    jwtToken: string;
 }
