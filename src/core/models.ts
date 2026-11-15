@@ -3,9 +3,6 @@ import { IncomingMessage, ServerResponse } from "http";
 import { DataType, Infer, ObjectType, ParsedSchema } from "./datatypes.js";
 import { InjectPayload } from "light-my-request";
 
-/*** definitions ***/
-export const PIPE_RESPONSE_BRAND = Symbol('PipeResponse');
-
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
 export type StringIfDefined<T> = T extends undefined ? undefined : string;
@@ -31,7 +28,7 @@ type RouteParams<Path extends string> =
     : ObjectType<StrictParamsSchema<Path>, false>;
 /*** response ***/
 export type PipeResponse<Body = unknown> = {
-    [PIPE_RESPONSE_BRAND]: true;
+    readonly __pipepressBrand: true;
     status: HTTPStatus;
     body?: Body;
     headers?: Record<string, string>;

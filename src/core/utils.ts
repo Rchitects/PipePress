@@ -1,6 +1,6 @@
 /*** imports ***/
 import { IncomingMessage, ServerResponse } from "http";
-import { HTTPContentType, HTTPStatus, PIPE_RESPONSE_BRAND, PipeResponse, SetCookieOptions } from "./models.js";
+import { HTTPContentType, HTTPStatus, PipeResponse, SetCookieOptions } from "./models.js";
 
 /*** functions ***/
 export function isContentType(source: string, ofType: HTTPContentType): boolean {
@@ -28,12 +28,15 @@ export function isPipeResponse(value: unknown): value is PipeResponse {
     return (
         typeof value === 'object' &&
         value !== null &&
-        PIPE_RESPONSE_BRAND in value
+        (value as { __pipepressBrand?: unknown }).__pipepressBrand === true
     );
 }
-type PipeResponseInput<Body> = Omit<PipeResponse<Body>, typeof PIPE_RESPONSE_BRAND>;
+type PipeResponseInput<Body = unknown> = Omit<PipeResponse<Body>, '__pipepressBrand'>;
 export function pipeResponse<Body = undefined>(opts: PipeResponseInput<Body>): PipeResponse<Body> {
-    return { [PIPE_RESPONSE_BRAND]: true, ...opts };
+    return {
+        ...opts,
+        __pipepressBrand: true
+    };
 }
 export function redirect(location: string, status: 301 | 302 | 303 | 307 | 308 = HTTPStatus.FOUND): PipeResponse<undefined> {
     return pipeResponse({
