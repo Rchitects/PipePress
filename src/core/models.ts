@@ -6,6 +6,8 @@ import { InjectPayload } from "light-my-request";
 /*** global ***/
 export type MaybePromise<T> = T | Promise<T>;
 export type StringIfDefined<T> = T extends undefined ? undefined : string;
+export type Simplify<T> = { [K in keyof T]: T[K] } & {};
+
 /*** params ***/
 type ExtractParamNames<Path extends string> =
     Path extends `${string}/:${infer Param}/${infer Rest}`

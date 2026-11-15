@@ -1,12 +1,14 @@
 /*** imports ***/
 import { JSONSchema7 } from "json-schema";
+import { Simplify } from "./models.js";
 
 /*** types ***/
 export type SchemaDefinition<Optional extends boolean = boolean> = Record<string, DataType<unknown, Optional>>;
-export type ParsedSchema<T extends SchemaDefinition> =
+export type ParsedSchema<T extends SchemaDefinition> = Simplify<
     { [K in keyof T as T[K] extends DataType<unknown, true> ? K : never]?: ReturnType<T[K]["validate"]> } &
-    { [K in keyof T as T[K] extends DataType<unknown, true> ? never : K]: ReturnType<T[K]["validate"]> };
-export type Infer<T> = T extends DataType<unknown> ? ReturnType<T["validate"]> : undefined;
+    { [K in keyof T as T[K] extends DataType<unknown, true> ? never : K]: ReturnType<T[K]["validate"]> }
+>;
+export type Infer<T> = T extends DataType<unknown, boolean> ? ReturnType<T["validate"]> : undefined;
 type Constructor<T> = { new(): T };
 
 /*** support functions ***/
@@ -232,7 +234,7 @@ class LiteralType<T extends string | number> extends DataType<T> {
     }
 }
 /*** helper functions ***/
-function Object<T extends SchemaDefinition>(schema: T) {
+function ObjectOf<T extends SchemaDefinition>(schema: T) {
     return new ObjectType(schema);
 }
 /*** export validator types ***/
@@ -242,7 +244,7 @@ export default {
     Boolean: validator(BooleanType),
     Date: validator(DateType),
     Array: validator(ArrayType),
-    Object,
+    Object: ObjectOf,
     StringLiteral: literalValidator(StringType),
     NumberLiteral: literalValidator(NumberType),
 }
