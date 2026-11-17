@@ -34,8 +34,8 @@ export function isPipeResponse(value: unknown): value is PipeResponse {
 type PipeResponseInput<Body = unknown> = Omit<PipeResponse<Body>, '__pipepressBrand'>;
 export function pipeResponse<Body = undefined>(opts: PipeResponseInput<Body>): PipeResponse<Body> {
     return {
+        __pipepressBrand: true,
         ...opts,
-        __pipepressBrand: true
     };
 }
 export function redirect(location: string, status: 301 | 302 | 303 | 307 | 308 = HTTPStatus.FOUND): PipeResponse<undefined> {
