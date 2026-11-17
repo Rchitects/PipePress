@@ -17,14 +17,18 @@ import {
     TooManyRequestsPipeErr,
     UnauthorizedPipeErr,
     ValidationPipeErr,
+    PipeStage,
 } from "../dist";
 import dt from "../dist/core/datatypes";
 
 function createDemoApp() {
+    const ts1: PipeStage<void, { user: string }> = { handler: async (ctx, state) => { } };
+    const ts2: PipeStage<void, { id: number }> = { handler: async (ctx, state) => { } };
     const app = new PipePress({
         cors: { preflight: 'auto' },
         maxBodyLength: 1_000_000,
-    });
+    })
+        .use(ts1);
 
     app.use(basicHTTPLogger());
     app.use(rateLimiter({ maxTokens: 20, refillAmount: 1, refillIntervalMs: 1000 }));
@@ -54,7 +58,8 @@ function createDemoApp() {
             greeting: dt.String(),
             name: dt.String(),
         }),
-    }, async (ctx) => {
+        stages: [ts2]
+    }, async (ctx, state) => {
         return {
             greeting: `Hello ${ctx.params.name}!`,
             name: ctx.params.name,
@@ -187,13 +192,13 @@ function createDemoApp() {
     });
 
     type AccountState = { scope: string; requestPath: string };
-    const accounts = new Router<AccountState>();
-    accounts.use({
-        handler: async (ctx, state) => {
-            state.scope = 'accounts';
-            state.requestPath = ctx.req.url || '/';
-        },
-    });
+    const accounts = new Router()
+        .use({
+            handler: async (ctx, state: AccountState) => {
+                state.scope = 'accounts';
+                state.requestPath = ctx.req.url || '/';
+            },
+        });
     accounts.get('/:id', {
         params: dt.Object({ id: dt.String() }),
         response: dt.Object({

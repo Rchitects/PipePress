@@ -7,7 +7,7 @@ import { AddressInfo } from "net";
 import { voidStageHandler } from "../stages/voidStageHandler.js";
 import { DataType } from "./datatypes.js";
 import { InternalPipeErr, PipeError, RouteNotFoundPipeErr } from "./error.js";
-import { AnyPipeStage, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, UnknownState } from "./models.js";
+import { AnyPipeStage, EmptyState, HTTPContentType, HTTPMethod, HTTPStatus, ParamsType, PipeContext, PipeCORSConfig, PipePressConfig, PipePressEvents, PipePressInjectOptions, PipePressInjectResponse, PipeResponse, PipeStage, PipeStageHandler, Simplify } from "./models.js";
 import { Router } from "./router.js";
 import { isPipeResponse, pipeResponse, setCookie } from "./utils.js";
 
@@ -30,7 +30,7 @@ const DEFAULT_CORS_CONFIG: Required<Omit<PipeCORSConfig, 'methods'>> = {
 }
 
 /*** class ***/
-export class PipePress<GlobalState extends UnknownState = UnknownState> extends Router<GlobalState, PipePressEvents> {
+export class PipePress<GlobalState extends object = EmptyState> extends Router<GlobalState, PipePressEvents> {
     /*** varbs ***/
     private _build = false;
     private _reqRouter: findMyWay.Instance<HTTPVersion.V1>
@@ -56,6 +56,11 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
     }
 
     /*** public functions ***/
+    override use<Res, State extends object = EmptyState>(stage: PipeStage<Res, State>): PipePress<Simplify<GlobalState & State>> {
+        super.use(stage);
+        return this as unknown as PipePress<Simplify<GlobalState & State>>;
+    }
+    
     build() {
         if (this._build) throw new Error('build() was already called');
 
@@ -94,7 +99,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
             this._reqRouter.on(route.method, route.path, async (req, res, params, store: RouteStore, _searchParams) => {
                 /* create context for this route */
                 const ctx = this._createContext(req, res, params);
-                const state: UnknownState = {};
+                const state = {} as GlobalState;
                 /* start executing all stages & handler */
                 try {
                     /* run CORS stage if needed */
@@ -385,7 +390,7 @@ export class PipePress<GlobalState extends UnknownState = UnknownState> extends 
     private async _handleNotFound(req: http.IncomingMessage, res: http.ServerResponse) {
         /* create context for this route */
         const ctx = this._createContext(req, res, {});
-        const state: UnknownState = {};
+        const state = {} as GlobalState;
         /* start executing all global stages */
         try {
             /* stages */
